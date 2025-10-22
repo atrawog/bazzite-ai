@@ -20,10 +20,8 @@ dnf5 install -y \
     cloud-utils-resize-part-image \
     cloud-utils-vcs-run \
     cloud-utils-write-mime-multipart \
-    coolercontrol \
     debootstrap \
     dislocker \
-    dotnet-sdk-9.0 \
     ecryptfs-utils \
     fdupes \
     flatpak-builder \
@@ -31,7 +29,6 @@ dnf5 install -y \
     fuse-dislocker \
     fuse3-devel \
     gh \
-    ghostty \
     git-lfs \
     golang-bazil-fuse-devel \
     golang-bin \
@@ -43,6 +40,7 @@ dnf5 install -y \
     keepassxc \
     libtool \
     liquidctl \
+    lm-sensors \
     nicstat \
     nodejs20 \
     nodejs20-devel \
@@ -89,6 +87,31 @@ dnf5 install -y \
     xorg-x11-server-Xorg \
     zsh
 
+# Install packages from external repositories (COPRs)
+# Repos are enabled only for these specific installs to prevent unexpected updates
+echo "Installing packages from external repositories..."
+
+# CoolerControl - Hardware monitoring (requires liquidctl and lm-sensors already installed)
+dnf5 install -y \
+    --enable-repo="copr:copr.fedorainfracloud.org:kylegospo:coolercontrol" \
+    coolercontrol || {
+        echo "::warning::CoolerControl installation failed, continuing..."
+    }
+
+# Ghostty - Modern terminal emulator
+dnf5 install -y \
+    --enable-repo="copr:copr.fedorainfracloud.org:pgdev:ghostty" \
+    ghostty || {
+        echo "::warning::Ghostty installation failed, continuing..."
+    }
+
+# .NET SDK 9.0 from Microsoft
+dnf5 install -y \
+    --enable-repo="microsoft-prod" \
+    dotnet-sdk-9.0 || {
+        echo "::warning::.NET SDK 9.0 installation failed, continuing..."
+    }
+
 # Restore UUPD update timer and Input Remapper
 sed -i 's@^NoDisplay=true@NoDisplay=false@' /usr/share/applications/input-remapper-gtk.desktop
 systemctl enable input-remapper.service
@@ -124,6 +147,23 @@ dnf5 install --enable-repo="copr:copr.fedorainfracloud.org:ublue-os:packages" -y
 # Adding repositories should be a LAST RESORT. Contributing to Terra or `ublue-os/packages` is much preferred
 # over using random coprs. Please keep this in mind when adding external dependencies.
 # If adding any dependency, make sure to always have it disabled by default and _only_ enable it on `dnf install`
+
+# Configure COPRs for packages not in standard repos
+# Following best practice: disabled by default, enabled only on install
+
+# CoolerControl - Hardware monitoring and control for AIOs/fan hubs
+# Required for USB AIOs, liquid coolers, and fan hub support
+# https://docs.coolercontrol.org/hardware-support.html
+dnf5 copr enable -y kylegospo/coolercontrol
+dnf5 config-manager setopt "copr:copr.fedorainfracloud.org:kylegospo:coolercontrol.enabled=0"
+
+# Ghostty - Modern GPU-accelerated terminal emulator
+dnf5 copr enable -y pgdev/ghostty
+dnf5 config-manager setopt "copr:copr.fedorainfracloud.org:pgdev:ghostty.enabled=0"
+
+# Microsoft .NET SDK repository (separate from VS Code repo)
+dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/rhel/9/prod/" --id="microsoft-prod"
+dnf5 config-manager setopt microsoft-prod.enabled=0
 
 dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode"
 dnf5 config-manager setopt vscode.enabled=0

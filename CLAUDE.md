@@ -353,6 +353,14 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 - `image-versions.yaml` - Tracks base image versions/digests (managed by Renovate)
 - `artifacthub-repo.yml` - ArtifactHub metadata for image discovery
 
+**External Repositories:**
+- `vscode` - Microsoft repository for VS Code
+- `docker-ce-stable` - Docker CE repository
+- `microsoft-prod` - Microsoft .NET SDK repository
+- `copr:kylegospo:coolercontrol` - CoolerControl COPR (hardware monitoring for AIOs/fan hubs)
+- `copr:pgdev:ghostty` - Ghostty terminal COPR
+- All external repos disabled by default, enabled only during installation
+
 **ISO/VM Images:**
 - `image.toml` - Minimal config for VM/raw images (20GB root partition)
 - `iso.toml` - Base ISO installer config with kickstart to switch to registry image
