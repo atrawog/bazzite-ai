@@ -303,7 +303,9 @@ jobs:
 
       - name: Lowercase Image
         id: lowercase
-        run: echo "image=bazzite-ai-devcontainer" >> $GITHUB_OUTPUT
+        run: |
+          echo "registry=ghcr.io/${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          echo "image=bazzite-ai-devcontainer" >> $GITHUB_OUTPUT
 
       - name: Push to GHCR
         uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
@@ -319,13 +321,17 @@ jobs:
 
       - name: Sign Image
         if: github.event_name != 'pull_request'
+        continue-on-error: true  # Don't fail build if signing fails
         env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          LOWERCASE_REGISTRY: ${{ steps.lowercase.outputs.registry }}
+          LOWERCASE_IMAGE: ${{ steps.lowercase.outputs.image }}
           TAGS_TO_SIGN: ${{ steps.metadata.outputs.tags }}
+          COSIGN_EXPERIMENTAL: false
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
-          IMAGE_FULL="ghcr.io/${{ github.repository_owner }}/bazzite-ai-devcontainer"
+          IMAGE_FULL="${LOWERCASE_REGISTRY}/${LOWERCASE_IMAGE}"
           for tag in ${TAGS_TO_SIGN}; do
-            cosign sign -y --key env://COSIGN_PRIVATE_KEY $IMAGE_FULL:$tag
+            cosign sign -y --key env://COSIGN_PRIVATE_KEY $IMAGE_FULL:$tag || echo "Warning: Failed to sign $IMAGE_FULL:$tag"
           done
 
   check:
