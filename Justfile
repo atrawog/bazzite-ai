@@ -489,7 +489,7 @@ release-organize tag=`just _release-tag`:
     # Move ISOs if they exist in root
     moved_files=()
     for pattern in "*.iso" "*.torrent" "*-magnets.txt" "SHA256SUMS"; do
-      for file in ${pattern}; do
+      for file in $pattern; do
         if [[ -f "$file" ]]; then
           echo "Moving $file to ${release_path}/"
           mv "$file" "${release_path}/"
@@ -508,7 +508,7 @@ release-organize tag=`just _release-tag`:
     # Update or create 'latest' symlink
     echo
     echo "Updating ${release_dir}/latest symlink..."
-    cd "${release_dir}" && ln -sf "${tag}" latest
+    (cd "${release_dir}" && ln -sf "${tag}" latest)
 
     echo "✓ Release ${tag} organized"
     echo
@@ -1425,8 +1425,9 @@ release-verify-torrents tag=`just _release-tag`:
     set -euo pipefail
     tag="{{ tag }}"
 
-    iso_base="${image_name}-${tag}.iso"
-    iso_nvidia="${image_name}-nvidia-${tag}.iso"
+    release_path="${release_dir}/${tag}"
+    iso_base="${release_path}/${image_name}-${tag}.iso"
+    iso_nvidia="${release_path}/${image_name}-nvidia-${tag}.iso"
 
     echo "Verifying torrent files..."
     echo
