@@ -41,7 +41,7 @@ dnf5 install -y \
     keepassxc \
     libtool \
     liquidctl \
-    lm-sensors \
+    lm_sensors \
     nicstat \
     nodejs20 \
     nodejs20-devel \
@@ -92,7 +92,7 @@ dnf5 install -y \
 # Repos are enabled only for these specific installs to prevent unexpected updates
 echo "Installing packages from external repositories..."
 
-# CoolerControl - Hardware monitoring (requires liquidctl and lm-sensors already installed)
+# CoolerControl - Hardware monitoring (requires liquidctl and lm_sensors already installed)
 dnf5 install -y \
     --enable-repo="copr:copr.fedorainfracloud.org:codifryed:CoolerControl" \
     coolercontrol || {
