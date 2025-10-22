@@ -2,23 +2,91 @@
 set -xeuo pipefail
 
 dnf5 install -y \
+    alsa-lib-devel \
     android-tools \
+    arch-install-scripts \
+    autoconf \
+    automake \
     bcc \
     bpftop \
     bpftrace \
-    flatpak-builder \
+    bridge-utils \
     ccache \
+    ceph-fuse \
+    cloud-init \
+    cloud-utils-cloud-localds \
+    cloud-utils-growpart \
+    cloud-utils-mount-image-callback \
+    cloud-utils-resize-part-image \
+    cloud-utils-vcs-run \
+    cloud-utils-write-mime-multipart \
+    coolercontrol \
+    debootstrap \
+    dislocker \
+    dotnet-sdk-9.0 \
+    ecryptfs-utils \
+    fdupes \
+    flatpak-builder \
+    fuse-devel \
+    fuse-dislocker \
+    fuse3-devel \
+    gh \
+    ghostty \
+    git-lfs \
+    golang-bazil-fuse-devel \
+    golang-bin \
+    html2text \
+    htop \
+    jack-audio-connection-kit-devel \
+    jdupes \
+    kaffeine \
+    keepassxc \
+    libtool \
+    liquidctl \
     nicstat \
+    nodejs20 \
+    nodejs20-devel \
+    nodejs20-full-i18n \
+    nodejs20-npm \
     numactl \
+    pavucontrol \
+    pcp \
+    pcp-system-tools \
+    php \
+    podman-compose \
     podman-machine \
+    podman-remote \
     podman-tui \
+    powertop \
+    python3-devel \
+    python3-keepassxc-browser \
     python3-ramalama \
+    python3-tkinter \
     qemu-kvm \
+    qemu-user-binfmt \
+    qemu-user-static \
+    qjackctl \
     restic \
     rclone \
+    rpm-sign \
+    sirikali \
+    squashfuse \
+    strace \
+    syncthing \
+    syncthing-tools \
     sysprof \
+    sysstat \
+    Thunar \
     tiptop \
+    transmission \
+    transmission-cli \
+    transmission-daemon \
+    transmission-qt \
     usbmuxd \
+    vlc \
+    wireshark \
+    xorg-x11-server-devel \
+    xorg-x11-server-Xorg \
     zsh
 
 # Restore UUPD update timer and Input Remapper

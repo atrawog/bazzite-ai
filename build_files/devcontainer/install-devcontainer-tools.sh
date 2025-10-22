@@ -6,15 +6,42 @@ set -xeuo pipefail
 
 # Core development tools
 dnf5 install -y \
+    alsa-lib-devel \
+    arch-install-scripts \
+    autoconf \
+    automake \
+    bridge-utils \
     ccache cmake \
-    gcc gcc-c++ make \
-    git vim neovim \
-    nodejs npm \
-    podman podman-docker \
-    python3 python3-pip \
-    zsh \
     curl \
-    wget
+    debootstrap \
+    dislocker \
+    dotnet-sdk-9.0 \
+    ecryptfs-utils \
+    fdupes \
+    fuse-devel \
+    fuse-dislocker \
+    fuse3-devel \
+    gcc gcc-c++ make \
+    gh \
+    git git-lfs \
+    golang-bazil-fuse-devel \
+    golang-bin \
+    html2text \
+    htop \
+    jdupes \
+    libtool \
+    neovim \
+    nodejs nodejs20 nodejs20-devel nodejs20-full-i18n nodejs20-npm npm \
+    php \
+    podman podman-compose podman-docker podman-remote \
+    python3 python3-devel python3-pip python3-tkinter \
+    rpm-sign \
+    squashfuse \
+    strace \
+    sysstat \
+    vim \
+    wget \
+    zsh
 
 # Optional tools (install if available, skip if not)
 dnf5 install -y \
