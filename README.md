@@ -6,41 +6,41 @@ This is a custom fork of [Bazzite DX](https://github.com/ublue-os/bazzite-dx) wi
 
 ## Installation
 
-To rebase an existing Bazzite installation to Bazzite AI, use one of the following commands based on your current variant:
+Bazzite AI is available in two variants, both with KDE Plasma desktop:
+- **bazzite-ai** - For AMD/Intel GPUs
+- **bazzite-ai-nvidia** - For NVIDIA GPUs
 
-**For KDE Plasma (default Bazzite):**
+### Fresh Installation (ISO)
+
+Download the latest ISO from [Releases](https://github.com/atrawog/bazzite-ai/releases/latest):
+
+- **bazzite-ai-*.iso** - For AMD/Intel GPUs
+- **bazzite-ai-nvidia-*.iso** - For NVIDIA GPUs
+
+Create a bootable USB drive using your preferred tool:
+- [Fedora Media Writer](https://fedoraproject.org/workstation/download) (Recommended)
+- [balenaEtcher](https://etcher.balena.io/)
+- [Ventoy](https://www.ventoy.net/)
+
+Boot from the USB drive and follow the installation prompts.
+
+### Rebase from Existing Bazzite
+
+To rebase an existing Bazzite installation to Bazzite AI:
+
+**For AMD/Intel GPUs (KDE Plasma):**
 ```bash
 rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai:stable
 ```
 
-**For GNOME:**
-```bash
-rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai-gnome:stable
-```
-
-### NVIDIA Variants
-
-**For KDE Plasma with NVIDIA:**
+**For NVIDIA GPUs (KDE Plasma):**
 ```bash
 rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai-nvidia:stable
 ```
 
-**For GNOME with NVIDIA:**
-```bash
-rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai-nvidia-gnome:stable
-```
+After running the rebase command, reboot your system to complete the installation.
 
-To skip signature verification (not recommended unless you know what you're doing and why you're doing it), replace `ostree-image-signed:docker://ghcr.io` with `ostree-unverified-registry:ghcr.io`.
-
-### ⚠️ Important Desktop Environment Warning
-
-**Do not switch between GNOME and KDE variants!** If you are currently running:
-- **GNOME** (bazzite-gnome*): Only use the `-gnome` variants above
-- **KDE Plasma** (standard bazzite): Only use the variants without `-gnome` in the name
-
-Switching between desktop environments via rebase can break your installation and may require a complete reinstall.
-
-After running the rebase command, reboot your system to complete the installation. 
+**Note:** To skip signature verification (not recommended), replace `ostree-image-signed:docker://ghcr.io` with `ostree-unverified-registry:ghcr.io`. 
 
 ## Acknowledgments
 

@@ -112,7 +112,144 @@ just fix
 # Clean build artifacts
 just clean
 just sudo-clean  # For rootful podman artifacts
+
+# Clean release artifacts (ISOs, torrents, releases/ directory)
+just release-clean
 ```
+
+**Note:** The `releases/` directory containing ISO images and torrents is git-ignored.
+
+## Release Management and ISO Distribution
+
+This project includes a comprehensive workflow for building ISO installers and distributing them via BitTorrent (due to GitHub's 2GB file size limit).
+
+### Release Directory Structure
+
+```
+releases/
+├── 42.20251022/              # Version-specific directory
+│   ├── bazzite-ai-42.20251022.iso
+│   ├── bazzite-ai-nvidia-42.20251022.iso
+│   ├── bazzite-ai-42.20251022.iso.torrent
+│   ├── bazzite-ai-nvidia-42.20251022.iso.torrent
+│   ├── SHA256SUMS
+│   └── 42.20251022-magnets.txt
+└── latest -> 42.20251022     # Symlink to current release
+```
+
+### Complete Release Workflow
+
+The `just release` command automates the entire release process:
+
+```bash
+# Full automated release (7 steps)
+just release [tag]
+
+# Steps performed:
+# 1. Pull container images from GHCR
+# 2. Build both ISO variants (30-60 min each)
+# 3. Generate SHA256 checksums
+# 4. Organize files into releases/{tag}/ directory
+# 5. Create .torrent files with public trackers
+# 6. Start seeding service (if configured)
+# 7. Create GitHub release with torrents
+```
+
+### Individual Release Commands
+
+**ISO Building:**
+```bash
+# Pull container images from registry
+just release-pull [tag]
+
+# Build both ISO variants
+just release-build-isos [tag]
+
+# Generate and verify checksums
+just release-checksums
+```
+
+**File Organization:**
+```bash
+# Organize release files into releases/{tag}/ structure
+just release-organize [tag]
+
+# Creates:
+# - releases/{tag}/ directory
+# - Moves ISOs, torrents, checksums into it
+# - Updates releases/latest symlink
+```
+
+**Torrent Distribution:**
+```bash
+# Create .torrent files with public trackers
+just release-create-torrents [tag]
+
+# Display torrent info and magnet links
+just release-torrents-info [tag]
+```
+
+**Seeding Management:**
+```bash
+# Set up transmission-daemon systemd service
+just release-setup-seeding
+
+# Start seeding torrents (adds to transmission-daemon)
+just release-seed-start [tag]
+
+# Stop seeding service
+just release-seed-stop
+
+# Show seeding status and statistics
+just release-seed-status
+```
+
+The seeding service:
+- Runs as a systemd user service (`bazzite-ai-seeding.service`)
+- Uses transmission-daemon for BitTorrent
+- Configured with 2.0 ratio limit (seeds to 200% uploaded)
+- Continues seeding across reboots
+- Configuration: `.transmission-daemon.json` (git-ignored)
+
+**GitHub Release:**
+```bash
+# Create GitHub release with torrent files
+just release-create [tag]
+
+# Uploads:
+# - .torrent files (small enough for GitHub)
+# - SHA256SUMS
+# - Magnet links in release notes
+# - Instructions for downloading via BitTorrent
+```
+
+**Utilities:**
+```bash
+# List all releases
+just release-list
+
+# Clean release artifacts (prompts for confirmation)
+just release-clean
+
+# Verify checksums
+just release-verify
+
+# Upload files to existing release
+just release-upload [tag] [files...]
+```
+
+### Why BitTorrent Distribution?
+
+ISOs are 8+ GB each, exceeding GitHub's 2GB release asset limit. BitTorrent provides:
+- **Scalability**: Distributed bandwidth from seeders
+- **Reliability**: Resume interrupted downloads
+- **Verification**: Built-in integrity checking
+- **Cost**: No hosting fees or bandwidth limits
+
+Users can download via:
+1. `.torrent` files from GitHub releases
+2. Magnet links (in release notes)
+3. Any BitTorrent client (Transmission, qBittorrent, Deluge)
 
 ## Image Variants
 
@@ -149,11 +286,25 @@ Developer-focused changes made in `build_files/20-install-apps.sh`:
 
 ## Configuration Files
 
-- `image.toml` - Minimal config for VM/raw images (20GB root partition)
-- `iso.toml` - ISO installer config with kickstart to switch to registry image
-- `image-versions.yaml` - Tracks base image versions/digests (managed by Renovate)
+**Container Build:**
 - `Containerfile` - Multi-stage build using BASE_IMAGE arg
+- `image-versions.yaml` - Tracks base image versions/digests (managed by Renovate)
 - `artifacthub-repo.yml` - ArtifactHub metadata for image discovery
+
+**ISO/VM Images:**
+- `image.toml` - Minimal config for VM/raw images (20GB root partition)
+- `iso.toml` - Base ISO installer config with kickstart to switch to registry image
+- `iso-nvidia.toml` - NVIDIA ISO installer config
+
+**Release Infrastructure:**
+- `releases/` - Directory structure for organized release artifacts (git-ignored)
+- `.transmission-daemon.json` - Torrent seeding daemon config (git-ignored)
+- `scripts/setup-seeding-service.sh` - Sets up systemd seeding service
+- `scripts/create-release.sh` - Automated release creation script
+
+**Documentation:**
+- `docs/ISO-BUILD.md` - Comprehensive ISO building guide
+- `CLAUDE.md` - This file, guidance for Claude Code
 
 ## CI/CD Pipeline
 
@@ -184,3 +335,6 @@ ujust toggle-gamemode [gamemode|desktop|status|help]
 - **Podman Preferred**: The justfile auto-detects podman or docker, preferring podman.
 - **No Direct Installation**: Users rebase existing Bazzite installs using `rpm-ostree rebase`.
 - **Derived from Bazzite Deck**: Uses `-deck` variants as base, then removes gaming-specific configs.
+- **Release Directory**: `releases/` contains version-specific subdirectories with ISOs, torrents, and checksums. This directory is git-ignored.
+- **BitTorrent Distribution**: ISOs exceed GitHub's 2GB limit, so they're distributed via BitTorrent. The seeding service uses transmission-daemon as a systemd user service.
+- **ISO Build Time**: Each ISO variant takes 30-60 minutes to build. The complete release workflow takes 1-2 hours.

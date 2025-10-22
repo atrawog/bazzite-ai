@@ -1,2 +1,38 @@
+# Development secrets
 cosign.key
 _build_*
+
+# IDE/Editor files
+*.code-workspace
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Claude Code settings
+.claude/settings.local.json
+
+# Build output directory (all formats)
+output/
+*.manifest.json
+
+# Release artifacts directory
+releases/
+
+# Torrent seeding infrastructure
+.transmission-daemon.json
+.incomplete-torrents/
+
+# Individual release artifacts (if accidentally placed in root)
+*.iso
+*.torrent
+*-magnets.txt
+SHA256SUMS
+
+# Temporary files
+*.tmp
+*.log
+*.bak
