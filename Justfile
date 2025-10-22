@@ -569,6 +569,16 @@ release-create tag=`just _release-tag`:
     echo "Creating GitHub release: ${tag}"
     echo
 
+    # Get file sizes
+    iso_base_size="unknown"
+    iso_nvidia_size="unknown"
+    if [[ -f "${release_path}/${iso_base}" ]]; then
+      iso_base_size=$(du -h "${release_path}/${iso_base}" | cut -f1)
+    fi
+    if [[ -f "${release_path}/${iso_nvidia}" ]]; then
+      iso_nvidia_size=$(du -h "${release_path}/${iso_nvidia}" | cut -f1)
+    fi
+
     # Check if torrents exist
     torrents_exist=false
     if [[ -f "${release_path}/${iso_base}.torrent" ]] && [[ -f "${release_path}/${iso_nvidia}.torrent" ]]; then
@@ -588,36 +598,48 @@ release-create tag=`just _release-tag`:
 
     # Generate release notes with torrent info if available
     if $torrents_exist && [[ -f "${release_path}/${tag}-magnets.txt" ]]; then
-      # Extract magnet links
-      magnet_base=$(grep -A1 "Base ISO" "${release_path}/${tag}-magnets.txt" | tail -n1 || echo "")
-      magnet_nvidia=$(grep -A1 "NVIDIA ISO" "${release_path}/${tag}-magnets.txt" | tail -n1 || echo "")
+      # Extract magnet links - more robust extraction
+      magnet_base=$(grep "^magnet:" "${release_path}/${tag}-magnets.txt" | head -n1 || echo "")
+      magnet_nvidia=$(grep "^magnet:" "${release_path}/${tag}-magnets.txt" | tail -n1 || echo "")
 
       notes=$(cat <<EOF
     # Bazzite AI ${tag}
 
-    ## Download Options
+    ⚠️ **Important:** ISO files (${iso_base_size} & ${iso_nvidia_size}) exceed GitHub's 2GB limit and are **ONLY available via BitTorrent**.
 
-    ### Option 1: Torrent (Recommended - 8GB+ files)
+    ## Download ISOs via BitTorrent
 
-    The ISO files are distributed via BitTorrent due to GitHub's 2GB file size limit.
+    ### Base ISO (AMD/Intel GPUs) - ${iso_base_size}
 
-    **Base ISO (AMD/Intel GPUs) - 8.2GB:**
-    - Download: [bazzite-ai-${tag}.iso.torrent](https://github.com/${repo_organization}/${image_name}/releases/download/${tag}/${iso_base}.torrent)
-    - Magnet link: \`${magnet_base}\`
+    **Download options:**
+    1. **Torrent file:** [${iso_base}.torrent](https://github.com/${repo_organization}/${image_name}/releases/download/${tag}/${iso_base}.torrent)
+    2. **Magnet link:**
+       \`\`\`
+       ${magnet_base}
+       \`\`\`
 
-    **NVIDIA ISO - 8.3GB:**
-    - Download: [bazzite-ai-nvidia-${tag}.iso.torrent](https://github.com/${repo_organization}/${image_name}/releases/download/${tag}/${iso_nvidia}.torrent)
-    - Magnet link: \`${magnet_nvidia}\`
+    ### NVIDIA ISO (NVIDIA GPUs) - ${iso_nvidia_size}
 
-    **How to download via torrent:**
-    1. Install a BitTorrent client:
-       - Linux: Transmission, qBittorrent, or Deluge
+    **Download options:**
+    1. **Torrent file:** [${iso_nvidia}.torrent](https://github.com/${repo_organization}/${image_name}/releases/download/${tag}/${iso_nvidia}.torrent)
+    2. **Magnet link:**
+       \`\`\`
+       ${magnet_nvidia}
+       \`\`\`
+
+    ### How to Use BitTorrent
+
+    1. **Install a BitTorrent client:**
+       - Linux: Transmission (pre-installed on most), qBittorrent, or Deluge
        - Windows/Mac: qBittorrent or Transmission
-    2. Click the .torrent file link above OR copy the magnet link
-    3. Open in your torrent client
-    4. After download completes, verify with SHA256SUMS (see below)
+    2. **Download via torrent file OR magnet link:**
+       - Click the .torrent file link above and open it in your client, OR
+       - Copy the magnet link and paste it into your client
+    3. **Wait for download to complete**
+    4. **Verify your download** with SHA256SUMS (see below)
+    5. **Please seed after downloading!** Help others by continuing to share the file
 
-    ### Option 2: Container Image Rebase (Existing Bazzite Users)
+    ## Alternative: Rebase from Existing Bazzite
 
     If you already have Bazzite installed, rebase to Bazzite AI:
 
@@ -668,11 +690,16 @@ release-create tag=`just _release-tag`:
       notes=$(cat <<EOF
     # Bazzite AI ${tag}
 
-    ## Download Option: Container Image Rebase
+    ## Download ISOs
 
-    **Note:** ISO files are being prepared for torrent distribution (8GB+ files exceed GitHub's 2GB limit).
+    ⚠️ **ISO files (${iso_base_size} & ${iso_nvidia_size}) are being prepared** for BitTorrent distribution.
 
-    For now, rebase from an existing Bazzite installation:
+    ISO files exceed GitHub's 2GB file size limit and cannot be uploaded directly.
+    Torrent files will be added shortly.
+
+    ## Alternative: Rebase from Existing Bazzite
+
+    For immediate installation, rebase from an existing Bazzite system:
 
     **AMD/Intel GPUs:**
     \`\`\`bash
@@ -731,6 +758,16 @@ release tag=`just _release-tag`:
     echo "Release tag: ${tag}"
     echo
 
+    # Check prerequisites first
+    echo "Checking prerequisites..."
+    if ! just release-check-prereqs; then
+      echo
+      echo "✗ Prerequisites check failed"
+      echo "Fix the issues above or run: just release-install-tools"
+      exit 1
+    fi
+    echo
+
     read -p "Continue with full release workflow? [y/N] " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -739,27 +776,31 @@ release tag=`just _release-tag`:
     fi
 
     echo
-    echo "Step 1/7: Pulling container images..."
+    echo "Step 1/8: Pulling container images..."
     just release-pull "$tag"
 
     echo
-    echo "Step 2/7: Building ISOs..."
+    echo "Step 2/8: Building ISOs (60-120 minutes)..."
     just release-build-isos "$tag" || exit 1
 
     echo
-    echo "Step 3/7: Generating checksums..."
+    echo "Step 3/8: Generating checksums..."
     just release-checksums
 
     echo
-    echo "Step 4/7: Organizing files into releases/ directory..."
+    echo "Step 4/8: Organizing files into releases/ directory..."
     just release-organize "$tag"
 
     echo
-    echo "Step 5/7: Creating torrents..."
+    echo "Step 5/8: Creating torrents..."
     just release-create-torrents "$tag"
 
     echo
-    echo "Step 6/7: Starting seeding service..."
+    echo "Step 6/8: Verifying torrents..."
+    just release-verify-torrents "$tag"
+
+    echo
+    echo "Step 7/8: Starting seeding service..."
     if systemctl --user is-enabled bazzite-ai-seeding.service &>/dev/null; then
       just release-seed-start "$tag"
     else
@@ -769,7 +810,7 @@ release tag=`just _release-tag`:
     fi
 
     echo
-    echo "Step 7/7: Creating GitHub release..."
+    echo "Step 8/8: Creating GitHub release..."
     just release-create "$tag"
 
     echo
@@ -1092,6 +1133,290 @@ release-magnets tag=`just _release-tag`:
       echo "Run 'just release-create-torrents' first"
       exit 1
     fi
+
+# Show comprehensive status of release workflow
+[group('Release')]
+release-status tag=`just _release-tag`:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tag="{{ tag }}"
+
+    release_path="${release_dir}/${tag}"
+    iso_base="${image_name}-${tag}.iso"
+    iso_nvidia="${image_name}-nvidia-${tag}.iso"
+
+    echo "=========================================="
+    echo "Bazzite AI Release Status"
+    echo "=========================================="
+    echo
+    echo "Release Tag: ${tag}"
+    echo "Release Path: ${release_path}"
+    echo
+
+    # Container Images
+    echo "Container Images:"
+    if podman inspect "ghcr.io/${repo_organization}/${image_name}:${tag}" &>/dev/null 2>&1; then
+      echo "  ✓ ghcr.io/${repo_organization}/${image_name}:${tag}"
+    elif podman inspect "ghcr.io/${repo_organization}/${image_name}:latest" &>/dev/null 2>&1; then
+      echo "  ✓ ghcr.io/${repo_organization}/${image_name}:latest (will use this)"
+    else
+      echo "  ✗ Base image not found locally"
+    fi
+
+    if podman inspect "ghcr.io/${repo_organization}/${image_name}-nvidia:${tag}" &>/dev/null 2>&1; then
+      echo "  ✓ ghcr.io/${repo_organization}/${image_name}-nvidia:${tag}"
+    elif podman inspect "ghcr.io/${repo_organization}/${image_name}-nvidia:latest" &>/dev/null 2>&1; then
+      echo "  ✓ ghcr.io/${repo_organization}/${image_name}-nvidia:latest (will use this)"
+    else
+      echo "  ✗ NVIDIA image not found locally"
+    fi
+    echo
+
+    # ISOs
+    echo "ISO Files:"
+    if [[ -f "${release_path}/${iso_base}" ]]; then
+      iso_base_size=$(du -h "${release_path}/${iso_base}" | cut -f1)
+      echo "  ✓ ${iso_base} (${iso_base_size})"
+    else
+      echo "  ✗ ${iso_base} not found"
+    fi
+
+    if [[ -f "${release_path}/${iso_nvidia}" ]]; then
+      iso_nvidia_size=$(du -h "${release_path}/${iso_nvidia}" | cut -f1)
+      echo "  ✓ ${iso_nvidia} (${iso_nvidia_size})"
+    else
+      echo "  ✗ ${iso_nvidia} not found"
+    fi
+    echo
+
+    # Checksums
+    echo "Checksums:"
+    if [[ -f "${release_path}/SHA256SUMS" ]]; then
+      echo "  ✓ SHA256SUMS exists"
+    else
+      echo "  ✗ SHA256SUMS not found"
+    fi
+    echo
+
+    # Torrents
+    echo "Torrent Files:"
+    if [[ -f "${release_path}/${iso_base}.torrent" ]]; then
+      echo "  ✓ ${iso_base}.torrent"
+    else
+      echo "  ✗ ${iso_base}.torrent not found"
+    fi
+
+    if [[ -f "${release_path}/${iso_nvidia}.torrent" ]]; then
+      echo "  ✓ ${iso_nvidia}.torrent"
+    else
+      echo "  ✗ ${iso_nvidia}.torrent not found"
+    fi
+
+    if [[ -f "${release_path}/${tag}-magnets.txt" ]]; then
+      echo "  ✓ ${tag}-magnets.txt"
+    else
+      echo "  ✗ ${tag}-magnets.txt not found"
+    fi
+    echo
+
+    # Seeding
+    echo "Seeding Status:"
+    if systemctl --user is-enabled bazzite-ai-seeding.service &>/dev/null; then
+      if systemctl --user is-active bazzite-ai-seeding.service &>/dev/null; then
+        echo "  ✓ Seeding service running"
+        if command -v transmission-remote &> /dev/null; then
+          torrent_count=$(transmission-remote -l 2>/dev/null | grep -c "%.%" || echo "0")
+          echo "  ✓ Active torrents: ${torrent_count}"
+        fi
+      else
+        echo "  ℹ Seeding service enabled but not running"
+      fi
+    else
+      echo "  ✗ Seeding service not set up"
+      echo "    Run: just release-setup-seeding"
+    fi
+    echo
+
+    # GitHub Release
+    echo "GitHub Release:"
+    if command -v gh &> /dev/null; then
+      if gh release view "${tag}" -R "${repo_organization}/${image_name}" &>/dev/null; then
+        echo "  ✓ Release ${tag} exists"
+      else
+        echo "  ✗ Release ${tag} not found"
+      fi
+    else
+      echo "  ℹ GitHub CLI not available"
+    fi
+    echo
+
+    echo "=========================================="
+    echo "Next Steps:"
+    if [[ ! -f "${release_path}/${iso_base}" ]]; then
+      echo "  1. Run: just release"
+    elif [[ ! -f "${release_path}/${iso_base}.torrent" ]]; then
+      echo "  1. Run: just release-create-torrents ${tag}"
+    elif ! gh release view "${tag}" -R "${repo_organization}/${image_name}" &>/dev/null 2>&1; then
+      echo "  1. Run: just release-create ${tag}"
+    else
+      echo "  ✓ Release workflow complete!"
+      echo "  • Check seeding: just release-seed-status"
+      echo "  • View release: gh release view ${tag}"
+    fi
+
+# Check all prerequisites for release workflow
+[group('Release')]
+release-check-prereqs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "=========================================="
+    echo "Release Prerequisites Check"
+    echo "=========================================="
+    echo
+
+    errors=0
+
+    # Check podman/docker
+    echo "Container Runtime:"
+    if command -v podman &> /dev/null; then
+      echo "  ✓ podman installed"
+    elif command -v docker &> /dev/null; then
+      echo "  ✓ docker installed"
+    else
+      echo "  ✗ Neither podman nor docker found"
+      ((errors++))
+    fi
+    echo
+
+    # Check gh CLI
+    echo "GitHub CLI:"
+    if command -v gh &> /dev/null; then
+      gh_version=$(gh --version | head -1)
+      echo "  ✓ ${gh_version}"
+
+      # Check authentication
+      if gh auth status &>/dev/null; then
+        echo "  ✓ Authenticated"
+      else
+        echo "  ✗ Not authenticated - run: gh auth login"
+        ((errors++))
+      fi
+    else
+      echo "  ✗ gh not installed"
+      echo "    Install: sudo rpm-ostree install gh && sudo rpm-ostree apply-live"
+      ((errors++))
+    fi
+    echo
+
+    # Check torrent creation tools
+    echo "Torrent Creation:"
+    if command -v mktorrent &> /dev/null; then
+      echo "  ✓ mktorrent installed (preferred)"
+    elif command -v transmission-create &> /dev/null; then
+      echo "  ✓ transmission-create installed (fallback)"
+    else
+      echo "  ✗ No torrent creation tool found"
+      echo "    Install: sudo rpm-ostree install transmission-cli"
+      ((errors++))
+    fi
+    echo
+
+    # Check transmission tools for seeding
+    echo "Torrent Management:"
+    if command -v transmission-daemon &> /dev/null; then
+      echo "  ✓ transmission-daemon installed"
+    else
+      echo "  ℹ transmission-daemon not installed (optional for seeding)"
+      echo "    Install: sudo rpm-ostree install transmission transmission-daemon"
+    fi
+
+    if command -v transmission-cli &> /dev/null; then
+      echo "  ✓ transmission-cli installed"
+    else
+      echo "  ℹ transmission-cli not installed (optional)"
+    fi
+
+    if command -v transmission-show &> /dev/null; then
+      echo "  ✓ transmission-show installed"
+    else
+      echo "  ✗ transmission-show not found (required for magnet links)"
+      ((errors++))
+    fi
+
+    if command -v transmission-remote &> /dev/null; then
+      echo "  ✓ transmission-remote installed"
+    else
+      echo "  ℹ transmission-remote not installed (optional for seeding)"
+    fi
+    echo
+
+    # Check disk space
+    echo "Disk Space:"
+    available=$(df -BG . | tail -1 | awk '{print $4}' | sed 's/G//')
+    echo "  Available: ${available}GB"
+    if [[ $available -lt 20 ]]; then
+      echo "  ⚠ Less than 20GB available (ISOs are ~17GB)"
+      echo "    Consider freeing up space"
+    else
+      echo "  ✓ Sufficient space for ISO builds"
+    fi
+    echo
+
+    # Check seeding service
+    echo "Seeding Service:"
+    if systemctl --user is-enabled bazzite-ai-seeding.service &>/dev/null; then
+      echo "  ✓ Seeding service configured"
+    else
+      echo "  ℹ Seeding service not set up (optional)"
+      echo "    Run: just release-setup-seeding"
+    fi
+    echo
+
+    echo "=========================================="
+    if [[ $errors -eq 0 ]]; then
+      echo "✓ All required prerequisites met!"
+      echo
+      echo "Ready to run: just release"
+    else
+      echo "✗ ${errors} error(s) found"
+      echo
+      echo "Fix the errors above before running release workflow"
+      exit 1
+    fi
+
+# Install required tools for release workflow (for non-immutable systems)
+[group('Release')]
+release-install-tools:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "=========================================="
+    echo "Release Tools Installation"
+    echo "=========================================="
+    echo
+    echo "⚠️  Note: This system is running Fedora Atomic/Bazzite (immutable)"
+    echo
+    echo "For immutable systems, use rpm-ostree:"
+    echo
+    echo "  # Install all tools at once:"
+    echo "  sudo rpm-ostree install gh mktorrent transmission transmission-daemon transmission-cli"
+    echo
+    echo "  # Apply immediately without reboot:"
+    echo "  sudo rpm-ostree apply-live"
+    echo
+    echo "Or install individually as needed:"
+    echo
+    echo "  # GitHub CLI (required)"
+    echo "  rpm-ostree install gh"
+    echo
+    echo "  # Torrent tools (required for torrents)"
+    echo "  rpm-ostree install mktorrent transmission-cli"
+    echo
+    echo "  # Seeding tools (optional)"
+    echo "  rpm-ostree install transmission transmission-daemon"
+    echo
+    echo "After installation, run: just release-check-prereqs"
 
 # Verify torrent files are valid
 [group('Release')]

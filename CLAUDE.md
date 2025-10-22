@@ -142,20 +142,59 @@ releases/
 
 ### Complete Release Workflow
 
+#### Quick Start (Fresh ISO Build)
+
+```bash
+# 1. Check prerequisites
+just release-check-prereqs
+
+# 2. Check current status (optional)
+just release-status
+
+# 3. Run complete release workflow (90-150 min)
+just release
+
+# 4. Monitor seeding status
+just release-seed-status
+```
+
 The `just release` command automates the entire release process:
 
 ```bash
-# Full automated release (7 steps)
+# Full automated release (8 steps, 90-150 minutes)
 just release [tag]
 
 # Steps performed:
-# 1. Pull container images from GHCR
-# 2. Build both ISO variants (30-60 min each)
+# 0. Check prerequisites (tools, authentication, disk space)
+# 1. Pull container images from GHCR (tag or :latest)
+# 2. Build both ISO variants (60-120 min total)
 # 3. Generate SHA256 checksums
 # 4. Organize files into releases/{tag}/ directory
 # 5. Create .torrent files with public trackers
-# 6. Start seeding service (if configured)
-# 7. Create GitHub release with torrents
+# 6. Verify torrents are valid
+# 7. Start seeding service (if configured)
+# 8. Create GitHub release with torrents and magnet links
+```
+
+**Important Notes:**
+- ISOs are built **fresh** from the latest container images
+- Each ISO takes 30-60 minutes to build (2 ISOs = 60-120 min total)
+- Requires ~20GB disk space for ISOs
+- GitHub CLI must be authenticated: `gh auth login`
+- Seeding service is optional but recommended
+
+#### Helper Commands
+
+**Prerequisites and Status:**
+```bash
+# Check all prerequisites before starting
+just release-check-prereqs
+
+# Show current release status
+just release-status [tag]
+
+# Show installation instructions for tools
+just release-install-tools
 ```
 
 ### Individual Release Commands
