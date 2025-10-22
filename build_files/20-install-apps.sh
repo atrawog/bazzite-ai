@@ -47,6 +47,7 @@ dnf5 install -y \
     nodejs20-devel \
     nodejs20-full-i18n \
     nodejs20-npm \
+    nodejs-npm \
     numactl \
     pavucontrol \
     pcp \
@@ -88,24 +89,6 @@ dnf5 install -y \
     xorg-x11-server-Xorg \
     zsh
 
-# Install packages from external repositories (COPRs)
-# Repos are enabled only for these specific installs to prevent unexpected updates
-echo "Installing packages from external repositories..."
-
-# CoolerControl - Hardware monitoring (requires liquidctl and lm_sensors already installed)
-dnf5 install -y \
-    --enable-repo="copr:copr.fedorainfracloud.org:codifryed:CoolerControl" \
-    coolercontrol || {
-        echo "::warning::CoolerControl installation failed, continuing..."
-    }
-
-# Ghostty - Modern terminal emulator
-dnf5 install -y \
-    --enable-repo="copr:copr.fedorainfracloud.org:scottames:ghostty" \
-    ghostty || {
-        echo "::warning::Ghostty installation failed, continuing..."
-    }
-
 # Restore UUPD update timer and Input Remapper
 sed -i 's@^NoDisplay=true@NoDisplay=false@' /usr/share/applications/input-remapper-gtk.desktop
 systemctl enable input-remapper.service
@@ -138,23 +121,31 @@ fi
 dnf5 install --enable-repo="copr:copr.fedorainfracloud.org:ublue-os:packages" -y \
     ublue-setup-services
 
-# Adding repositories should be a LAST RESORT. Contributing to Terra or `ublue-os/packages` is much preferred
-# over using random coprs. Please keep this in mind when adding external dependencies.
-# If adding any dependency, make sure to always have it disabled by default and _only_ enable it on `dnf install`
-
-# Configure COPRs for packages not in standard repos
-# Following best practice: disabled by default, enabled only on install
+# Install packages from external repositories (COPRs)
+# Following best practice: enable repo, install package, then disable repo
+echo "Installing packages from external repositories..."
 
 # CoolerControl - Hardware monitoring and control for AIOs/fan hubs
-# Required for USB AIOs, liquid coolers, and fan hub support
+# Required for USB AIOs, liquid coolers, and fan hub support (requires liquidctl and lm_sensors)
 # https://docs.coolercontrol.org/hardware-support.html
 dnf5 copr enable -y codifryed/CoolerControl
+dnf5 install -y coolercontrol || {
+    echo "::warning::CoolerControl installation failed, continuing..."
+}
 dnf5 config-manager setopt "copr:copr.fedorainfracloud.org:codifryed:CoolerControl.enabled=0"
 
 # Ghostty - Modern GPU-accelerated terminal emulator
 dnf5 copr enable -y scottames/ghostty
+dnf5 install -y ghostty || {
+    echo "::warning::Ghostty installation failed, continuing..."
+}
 dnf5 config-manager setopt "copr:copr.fedorainfracloud.org:scottames:ghostty.enabled=0"
 
+# Adding repositories should be a LAST RESORT. Contributing to Terra or `ublue-os/packages` is much preferred
+# over using random coprs. Please keep this in mind when adding external dependencies.
+# If adding any dependency, make sure to always have it disabled by default and _only_ enable it on `dnf install`
+
+# Configure VS Code repository
 dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode"
 dnf5 config-manager setopt vscode.enabled=0
 # FIXME: gpgcheck is broken for vscode due to it using `asc` for checking
@@ -198,6 +189,7 @@ npm install -g @devcontainers/cli || {
 # Install pixi.sh - Modern package/project manager for conda ecosystem
 echo "Installing pixi.sh for package management..."
 export PIXI_HOME=/usr/local/pixi
+mkdir -p "$PIXI_HOME"
 curl -fsSL https://pixi.sh/install.sh | bash -s -- --yes || {
     echo "::warning::pixi installation failed, continuing..."
 }
