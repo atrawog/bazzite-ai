@@ -1,7 +1,6 @@
-ARG CUDA_VERSION=12.6.3
 ARG FEDORA_VERSION=42
 
-FROM nvidia/cuda:${CUDA_VERSION}-devel-fedora${FEDORA_VERSION} AS base
+FROM fedora:${FEDORA_VERSION} AS base
 
 # Set environment (KDE variant)
 ENV IMAGE_NAME=bazzite-ai-devcontainer
@@ -17,14 +16,11 @@ RUN /build_files/install-devcontainer-tools.sh
 RUN useradd -m -s /bin/zsh -G wheel devuser && \
     echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# CUDA environment
+# CUDA environment (provided by host via nvidia-container-toolkit)
+# These paths will be available when GPU is passed through from host
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=${CUDA_HOME}/bin:${PATH}
 ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 
 WORKDIR /workspace
 USER devuser
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD nvidia-smi || exit 1

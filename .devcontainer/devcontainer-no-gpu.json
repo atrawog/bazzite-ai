@@ -4,7 +4,6 @@
     "dockerfile": "../Containerfile.devcontainer",
     "context": "..",
     "args": {
-      "CUDA_VERSION": "12.6.3",
       "FEDORA_VERSION": "42"
     }
   },

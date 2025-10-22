@@ -34,8 +34,6 @@ jobs:
       matrix:
         base_image:
           - bazzite-deck
-          - bazzite-deck-gnome
-          - bazzite-deck-nvidia-gnome
           - bazzite-deck-nvidia
 
     env:
@@ -293,7 +291,6 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           oci: false
           build-args: |
-            CUDA_VERSION=12.6.3
             FEDORA_VERSION=42
 
       - name: Login to GitHub Container Registry

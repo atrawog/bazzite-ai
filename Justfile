@@ -223,7 +223,6 @@ run-vm-iso-nvidia $target_image=("localhost/" + image_name + "-nvidia") $tag=def
 build-devcontainer $tag=default_tag:
     ${PODMAN} build \
       -f Containerfile.devcontainer \
-      --build-arg CUDA_VERSION=12.6.3 \
       --build-arg FEDORA_VERSION=42 \
       --tag "bazzite-ai-devcontainer:${tag}" \
       .
@@ -233,7 +232,6 @@ build-devcontainer $tag=default_tag:
 rebuild-devcontainer $tag=default_tag:
     ${PODMAN} build --no-cache \
       -f Containerfile.devcontainer \
-      --build-arg CUDA_VERSION=12.6.3 \
       --build-arg FEDORA_VERSION=42 \
       --tag "bazzite-ai-devcontainer:${tag}" \
       .
