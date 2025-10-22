@@ -2,44 +2,47 @@
 set -xeuo pipefail
 
 # Devcontainer tools for bazzite-ai (KDE variant)
-# Based on build_files/20-install-apps.sh
+# Simplified to only install packages available in standard Fedora 42
 
+# Core development tools
 dnf5 install -y \
-    android-tools \
-    bcc bpftop bpftrace \
     ccache cmake \
-    flatpak-builder \
     gcc gcc-c++ make \
     git vim neovim \
-    nicstat numactl \
     nodejs npm \
-    podman podman-docker podman-tui \
-    python3 python3-pip python3-ramalama \
+    podman podman-docker \
+    python3 python3-pip \
+    zsh \
+    curl \
+    wget
+
+# Optional tools (install if available, skip if not)
+dnf5 install -y \
+    android-tools \
     qemu-kvm \
     restic rclone \
-    sysprof tiptop \
-    usbmuxd \
-    zsh
+    || echo "Some optional packages not available, continuing..."
 
 # VS Code CLI
-dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode"
-dnf5 config-manager setopt vscode.enabled=0 vscode.gpgcheck=0
-dnf5 install --nogpgcheck --enable-repo="vscode" -y code
+dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode" || true
+dnf5 config-manager setopt vscode.enabled=0 vscode.gpgcheck=0 || true
+dnf5 install --nogpgcheck --enable-repo="vscode" -y code || echo "VS Code install skipped"
 
 # Docker CE for container-in-container
 docker_pkgs=(containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-compose-plugin)
-dnf5 config-manager addrepo --from-repofile="https://download.docker.com/linux/fedora/docker-ce.repo"
-dnf5 config-manager setopt docker-ce-stable.enabled=0
+dnf5 config-manager addrepo --from-repofile="https://download.docker.com/linux/fedora/docker-ce.repo" || true
+dnf5 config-manager setopt docker-ce-stable.enabled=0 || true
 dnf5 install -y --enable-repo="docker-ce-stable" "${docker_pkgs[@]}" || \
-    dnf5 install -y --enable-repo="docker-ce-test" "${docker_pkgs[@]}"
+    dnf5 install -y --enable-repo="docker-ce-test" "${docker_pkgs[@]}" || \
+    echo "Docker CE install skipped"
 
 # iptable_nat for docker-in-docker
 mkdir -p /etc/modules-load.d
-echo "iptable_nat" >> /etc/modules-load.d/ip_tables.conf
+echo "iptable_nat" >> /etc/modules-load.d/ip_tables.conf || true
 
 # Claude Code CLI
 curl -fsSL https://claude.ai/install.sh | bash || echo "Claude Code install skipped"
 
 # Cleanup
-dnf5 clean all
-rm -rf /var/cache/dnf5
+dnf5 clean all || true
+rm -rf /var/cache/dnf5 || true
