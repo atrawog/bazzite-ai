@@ -265,27 +265,31 @@ Bazzite AI builds **2 KDE Plasma variants** (GNOME is not supported):
 
 ## Devcontainer Variant
 
-**bazzite-ai-devcontainer** - CUDA-enabled development container
+**bazzite-ai-devcontainer** - Development container with optional CUDA support
 
 ### Purpose
 - Safe isolated environment for Claude Code with `--dangerously-skip-permissions`
-- CUDA-accelerated AI/ML workflows
-- Consistent development environment
+- Optional CUDA-accelerated AI/ML workflows (on NVIDIA systems)
+- Consistent development environment across GPU and non-GPU systems
 - No systemd overhead - pure tooling
 
-### Base Image
-- `nvidia/cuda:12.6.3-devel-fedora42`
-- All tools from bazzite-ai-nvidia (KDE)
-- VS Code devcontainer optimized
+### Key Features
+- **Unified Configuration**: One config works on both GPU and non-GPU systems
+- **Auto-Detection**: GPU automatically detected and enabled when available
+- **Pre-built Images**: Always uses latest from GitHub Container Registry
+- **Base**: Fedora 42 with all tools from bazzite-ai-nvidia (KDE)
+- **VS Code**: Native Dev Containers support
 
 ### Host Requirements
 
-**For GPU acceleration**:
+**For GPU acceleration** (optional):
 1. Must use **bazzite-ai-nvidia** (KDE variant only)
 2. nvidia-container-toolkit (pre-installed)
 3. CDI config via `ujust setup-gpu-containers`
 
-See `docs/HOST-SETUP-GPU.md`.
+**For CPU-only**: Works on any bazzite-ai variant.
+
+See `docs/HOST-SETUP-GPU.md` and `docs/DEVCONTAINER.md`.
 
 ### Justfile Commands
 
@@ -302,7 +306,9 @@ just run-devcontainer-no-gpu    # CPU only
 1. Install Dev Containers extension
 2. Open repo in VS Code
 3. Command Palette → "Reopen in Container"
-4. GPU auto-configured
+4. GPU auto-detected (works on both GPU and non-GPU systems)
+
+The unified configuration pulls the latest image from GHCR automatically. To update, rebuild the container.
 
 See `docs/DEVCONTAINER.md`.
 
@@ -359,8 +365,8 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 - `scripts/create-release.sh` - Automated release creation script
 
 **Devcontainer:**
-- `Containerfile.devcontainer` - CUDA devcontainer build
-- `.devcontainer/*.json` - VS Code configurations
+- `Containerfile.devcontainer` - Devcontainer build (Fedora 42 + dev tools)
+- `.devcontainer/devcontainer.json` - Unified VS Code configuration (GPU auto-detection)
 - `build_files/devcontainer/install-devcontainer-tools.sh` - Tool installation
 - `docs/DEVCONTAINER.md` - Usage guide
 - `docs/HOST-SETUP-GPU.md` - GPU setup (nvidia variant)

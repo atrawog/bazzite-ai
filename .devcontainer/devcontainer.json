@@ -1,12 +1,8 @@
 {
-  "name": "Bazzite AI Devcontainer (CUDA)",
-  "build": {
-    "dockerfile": "../Containerfile.devcontainer",
-    "context": "..",
-    "args": {
-      "FEDORA_VERSION": "42"
-    }
-  },
+  "name": "Bazzite AI Devcontainer",
+  // Always uses latest pre-built image from GitHub Container Registry
+  // Rebuild container (Ctrl+Shift+P -> "Rebuild Container") to get updates
+  "image": "ghcr.io/atrawog/bazzite-ai-devcontainer:latest",
   "hostRequirements": {
     "gpu": "optional"
   },
@@ -28,5 +24,5 @@
     }
   },
   "remoteUser": "devuser",
-  "postCreateCommand": "nvidia-smi || echo 'No GPU detected - CUDA workloads will not be available'"
+  "postCreateCommand": "nvidia-smi || echo '✓ CPU-only mode: No GPU detected (this is fine for non-NVIDIA systems)'"
 }

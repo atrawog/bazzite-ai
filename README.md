@@ -59,7 +59,7 @@ After running the rebase command, reboot your system to complete the installatio
 
 ## Devcontainer
 
-For isolated CUDA-accelerated development, use **bazzite-ai-devcontainer**:
+For isolated development, use **bazzite-ai-devcontainer**:
 
 ### Quick Start with VS Code
 
@@ -68,8 +68,10 @@ For isolated CUDA-accelerated development, use **bazzite-ai-devcontainer**:
 code /path/to/bazzite-ai
 
 # 2. Command Palette (Ctrl+Shift+P) → "Reopen in Container"
-# 3. GPU is automatically configured!
+# 3. GPU is automatically detected!
 ```
+
+**One unified configuration** that works on both GPU and non-GPU systems. Uses the latest pre-built image from GitHub Container Registry.
 
 ### Standalone Usage
 

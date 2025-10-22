@@ -36,7 +36,10 @@ code .
 # Press Ctrl+Shift+P, type "Reopen in Container", press Enter
 ```
 
-GPU access is automatically configured!
+**GPU is automatically detected!** The devcontainer uses a unified configuration that:
+- Works on both bazzite-ai-nvidia (with GPU) and bazzite-ai (without GPU)
+- Auto-detects GPU availability and gracefully falls back to CPU-only mode
+- Uses the latest pre-built image from GitHub Container Registry
 
 ### Option B: Standalone Container
 
@@ -104,7 +107,7 @@ No special requirements. Works on any bazzite-ai variant (including non-NVIDIA).
    - Open bazzite-ai repository in VS Code
    - Press `Ctrl+Shift+P`
    - Type "Dev Containers: Reopen in Container"
-   - Select "Bazzite AI Devcontainer (CUDA)"
+   - Press Enter (GPU auto-detected)
 
 ### Using the Devcontainer
 
@@ -128,18 +131,15 @@ node --version
 code --version
 ```
 
-### Switching Configurations
+### Getting Updates
 
-Two configurations are available:
+The devcontainer uses the latest pre-built image from GitHub Container Registry. To get the newest updates:
 
-- **devcontainer.json**: GPU-enabled (default)
-- **devcontainer-no-gpu.json**: CPU-only
-
-To switch:
 1. Press `Ctrl+Shift+P`
-2. Type "Dev Containers: Open Container Configuration File"
-3. Select the desired configuration
-4. Rebuild container
+2. Type "Dev Containers: Rebuild Container"
+3. Select "Rebuild Container"
+
+This will pull the latest image with all updates and security patches.
 
 ## Justfile Commands
 
