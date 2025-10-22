@@ -148,3 +148,59 @@ setup-gpu-containers:
     echo ""
     echo "Test GPU access:"
     echo "  just test-cuda-devcontainer"
+
+# Install or update Claude Code CLI
+install-claude-code:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Claude Code CLI${normal}"
+    echo "Location: $HOME/.local/bin/claude"
+    echo ""
+
+    # Run official installer
+    if curl -fsSL https://claude.ai/install.sh | bash; then
+        echo ""
+        if command -v claude &> /dev/null; then
+            echo -e "${green}${bold}✓ Success:${normal} Claude Code installed"
+            claude --version
+            echo ""
+            echo -e "${bold}Auto-updates:${normal} Enabled by default"
+            echo "Claude Code checks for updates on startup"
+            echo ""
+            echo -e "${bold}Usage:${normal} claude [command]"
+            echo "Run 'claude --help' for available commands"
+        else
+            echo -e "${yellow}${bold}Warning:${normal} Installation completed but 'claude' not in PATH"
+            echo "You may need to restart your shell or add ~/.local/bin to PATH"
+        fi
+    else
+        echo -e "${red}${bold}✗ Error:${normal} Claude Code installation failed"
+        exit 1
+    fi
+
+# Check Claude Code installation and auto-update status
+check-claude-code:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Claude Code Status${normal}"
+    echo ""
+
+    if command -v claude &> /dev/null; then
+        echo -e "${green}✓ Installed${normal}"
+        echo "Version: $(claude --version 2>&1 | head -1)"
+        echo "Location: $(which claude)"
+        echo ""
+        echo -e "${bold}Auto-update:${normal} Enabled"
+        echo "Claude Code automatically checks for updates on each run"
+        echo ""
+        echo "To update: Run any claude command (updates check automatically)"
+    else
+        echo -e "${red}✗ Not installed${normal}"
+        echo ""
+        echo "To install: ujust install-claude-code"
+        exit 1
+    fi

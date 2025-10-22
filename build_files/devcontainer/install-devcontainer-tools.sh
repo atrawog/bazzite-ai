@@ -67,6 +67,12 @@ dnf5 install -y --enable-repo="docker-ce-stable" "${docker_pkgs[@]}" || \
 mkdir -p /etc/modules-load.d
 echo "iptable_nat" >> /etc/modules-load.d/ip_tables.conf || true
 
+# Install devcontainers CLI for container automation
+npm install -g @devcontainers/cli || echo "devcontainers CLI install skipped"
+
+# Install pixi.sh for package management
+curl -fsSL https://pixi.sh/install.sh | bash -s -- --yes || echo "pixi install skipped"
+
 # Claude Code CLI
 curl -fsSL https://claude.ai/install.sh | bash || echo "Claude Code install skipped"
 

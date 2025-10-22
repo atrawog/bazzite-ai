@@ -158,6 +158,25 @@ mkdir -p /etc/modules-load.d && cat >>/etc/modules-load.d/ip_tables.conf <<EOF
 iptable_nat
 EOF
 
+# Install devcontainers CLI for container development automation
+# Requires Node.js, Python, and C/C++ compiler (already installed above)
+echo "Installing devcontainers CLI..."
+npm install -g @devcontainers/cli || {
+    echo "::warning::devcontainers CLI installation failed, continuing..."
+}
+
+# Install pixi.sh - Modern package/project manager for conda ecosystem
+echo "Installing pixi.sh for package management..."
+export PIXI_HOME=/usr/local/pixi
+curl -fsSL https://pixi.sh/install.sh | bash -s -- --yes || {
+    echo "::warning::pixi installation failed, continuing..."
+}
+# Ensure pixi is in system PATH
+if [ -f "$PIXI_HOME/bin/pixi" ]; then
+    ln -sf "$PIXI_HOME/bin/pixi" /usr/local/bin/pixi
+    echo "pixi installed to /usr/local/bin/pixi"
+fi
+
 # Install NVIDIA Container Toolkit for GPU-enabled containers
 # Only for nvidia variants (KDE only - bazzite-ai only supports KDE)
 if [[ "$IMAGE_NAME" == *nvidia* ]]; then
