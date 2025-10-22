@@ -22,6 +22,7 @@ dnf5 install -y \
     cloud-utils-write-mime-multipart \
     debootstrap \
     dislocker \
+    dotnet-sdk-9.0 \
     ecryptfs-utils \
     fdupes \
     flatpak-builder \
@@ -93,23 +94,16 @@ echo "Installing packages from external repositories..."
 
 # CoolerControl - Hardware monitoring (requires liquidctl and lm-sensors already installed)
 dnf5 install -y \
-    --enable-repo="copr:copr.fedorainfracloud.org:kylegospo:coolercontrol" \
+    --enable-repo="copr:copr.fedorainfracloud.org:codifryed:CoolerControl" \
     coolercontrol || {
         echo "::warning::CoolerControl installation failed, continuing..."
     }
 
 # Ghostty - Modern terminal emulator
 dnf5 install -y \
-    --enable-repo="copr:copr.fedorainfracloud.org:pgdev:ghostty" \
+    --enable-repo="copr:copr.fedorainfracloud.org:scottames:ghostty" \
     ghostty || {
         echo "::warning::Ghostty installation failed, continuing..."
-    }
-
-# .NET SDK 9.0 from Microsoft
-dnf5 install -y \
-    --enable-repo="microsoft-prod" \
-    dotnet-sdk-9.0 || {
-        echo "::warning::.NET SDK 9.0 installation failed, continuing..."
     }
 
 # Restore UUPD update timer and Input Remapper
@@ -154,16 +148,12 @@ dnf5 install --enable-repo="copr:copr.fedorainfracloud.org:ublue-os:packages" -y
 # CoolerControl - Hardware monitoring and control for AIOs/fan hubs
 # Required for USB AIOs, liquid coolers, and fan hub support
 # https://docs.coolercontrol.org/hardware-support.html
-dnf5 copr enable -y kylegospo/coolercontrol
-dnf5 config-manager setopt "copr:copr.fedorainfracloud.org:kylegospo:coolercontrol.enabled=0"
+dnf5 copr enable -y codifryed/CoolerControl
+dnf5 config-manager setopt "copr:copr.fedorainfracloud.org:codifryed:CoolerControl.enabled=0"
 
 # Ghostty - Modern GPU-accelerated terminal emulator
-dnf5 copr enable -y pgdev/ghostty
-dnf5 config-manager setopt "copr:copr.fedorainfracloud.org:pgdev:ghostty.enabled=0"
-
-# Microsoft .NET SDK repository (separate from VS Code repo)
-dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/rhel/9/prod/" --id="microsoft-prod"
-dnf5 config-manager setopt microsoft-prod.enabled=0
+dnf5 copr enable -y scottames/ghostty
+dnf5 config-manager setopt "copr:copr.fedorainfracloud.org:scottames:ghostty.enabled=0"
 
 dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode"
 dnf5 config-manager setopt vscode.enabled=0
