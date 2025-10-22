@@ -1512,6 +1512,25 @@ release-seed-start tag=`just _release-tag`:
       exit 1
     fi
 
+    # Verify ISOs exist where torrents expect them
+    iso_base_path="${release_path}/${iso_base}"
+    iso_nvidia_path="${release_path}/${iso_nvidia}"
+
+    if [[ ! -f "${iso_base_path}" ]]; then
+      echo "✗ Base ISO not found: ${iso_base_path}"
+      echo "Run 'just release-organize' first"
+      exit 1
+    fi
+
+    if [[ ! -f "${iso_nvidia_path}" ]]; then
+      echo "✗ NVIDIA ISO not found: ${iso_nvidia_path}"
+      echo "Run 'just release-organize' first"
+      exit 1
+    fi
+
+    echo "✓ ISOs verified in ${release_path}"
+    echo
+
     # Check if service is set up
     if ! systemctl --user is-enabled bazzite-ai-seeding.service &>/dev/null; then
       echo "✗ Seeding service not set up"
@@ -1536,15 +1555,18 @@ release-seed-start tag=`just _release-tag`:
     echo "Adding torrents to seeder..."
     echo
 
-    # Add base torrent
-    if transmission-remote -a "${torrent_base}" 2>/dev/null; then
+    # Get absolute path for transmission-remote
+    absolute_release_path=$(cd "${release_path}" && pwd)
+
+    # Add base torrent with download directory
+    if transmission-remote -w "${absolute_release_path}" -a "${torrent_base}" 2>/dev/null; then
       echo "✓ Added ${iso_base}.torrent"
     else
       echo "ℹ ${iso_base}.torrent may already be added"
     fi
 
-    # Add NVIDIA torrent
-    if transmission-remote -a "${torrent_nvidia}" 2>/dev/null; then
+    # Add NVIDIA torrent with download directory
+    if transmission-remote -w "${absolute_release_path}" -a "${torrent_nvidia}" 2>/dev/null; then
       echo "✓ Added ${iso_nvidia}.torrent"
     else
       echo "ℹ ${iso_nvidia}.torrent may already be added"
@@ -1611,6 +1633,22 @@ release-seed-status:
     # Get torrent list
     if transmission-remote -l 2>/dev/null; then
       echo
+      echo "Tracker Status:"
+      echo
+
+      # Show tracker status for each torrent
+      torrent_ids=$(transmission-remote -l | grep -E '^\s+[0-9]+' | awk '{print $1}')
+      if [ -n "$torrent_ids" ]; then
+        for id in $torrent_ids; do
+          torrent_name=$(transmission-remote -t ${id} -i 2>/dev/null | grep "^  Name:" | cut -d: -f2- | xargs)
+          if [ -n "$torrent_name" ]; then
+            echo "  Torrent ${id}: ${torrent_name}"
+            transmission-remote -t ${id} -it 2>/dev/null | grep -A1 "Tracker [0-9]:" | grep -v "^--$" | sed 's/^/    /'
+            echo
+          fi
+        done
+      fi
+
       echo "Commands:"
       echo "  Stop seeding: just release-seed-stop"
       echo "  View logs:    journalctl --user -u bazzite-ai-seeding -f"
@@ -1618,6 +1656,86 @@ release-seed-status:
       echo "✗ Cannot connect to transmission-daemon"
       echo "Check service: systemctl --user status bazzite-ai-seeding"
     fi
+
+# Verify torrents are ready to seed
+[group('Release')]
+release-seed-verify tag=`just _release-tag`:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tag="{{ tag }}"
+
+    release_path="${release_dir}/${tag}"
+
+    echo "=========================================="
+    echo "Verifying Seeding Readiness"
+    echo "=========================================="
+    echo
+
+    # Check if service exists
+    if ! systemctl --user is-enabled bazzite-ai-seeding.service &>/dev/null; then
+      echo "✗ Seeding service not set up"
+      echo "Run: just release-setup-seeding"
+      exit 1
+    fi
+
+    # Check if service is running
+    if ! systemctl --user is-active bazzite-ai-seeding.service &>/dev/null; then
+      echo "✗ Seeding service not running"
+      echo "Run: just release-seed-start ${tag}"
+      exit 1
+    fi
+
+    echo "✓ Seeding service running"
+    echo
+
+    # Check if transmission-remote is available
+    if ! command -v transmission-remote &> /dev/null; then
+      echo "✗ transmission-remote not found"
+      echo "Install with: sudo dnf install transmission-cli"
+      exit 1
+    fi
+
+    # Check torrents are added
+    torrent_count=$(transmission-remote -l 2>/dev/null | grep -c ".iso" || echo "0")
+    if [ $torrent_count -lt 2 ]; then
+      echo "✗ Expected 2 torrents, found ${torrent_count}"
+      echo "Run: just release-seed-start ${tag}"
+      exit 1
+    fi
+
+    echo "✓ Found ${torrent_count} torrent(s)"
+    echo
+
+    # Check both torrents are 100% complete
+    incomplete=$(transmission-remote -l 2>/dev/null | grep ".iso" | grep -v "100%" || echo "")
+    if [ -n "$incomplete" ]; then
+      echo "⚠️  Some torrents not fully verified:"
+      echo "$incomplete"
+      echo
+      echo "Wait for verification to complete or check ISO file locations"
+      echo "Check with: just release-seed-status"
+      exit 1
+    fi
+
+    echo "✓ All torrents verified (100% complete)"
+    echo "✓ Ready to seed"
+    echo
+
+    # Show active tracker announces
+    echo "Active trackers:"
+    transmission-remote -t all -it 2>/dev/null | \
+      grep -E "(Tracker [0-9]+:|Announce)" | \
+      grep -v "will not announce" | \
+      head -20
+
+    echo
+    echo "=========================================="
+    echo "✅ Seeding verification passed!"
+    echo "=========================================="
+    echo
+    echo "Next steps:"
+    echo "  Monitor: just release-seed-status"
+    echo "  Logs:    journalctl --user -u bazzite-ai-seeding -f"
 
 # Add a specific torrent file to the seeder
 [group('Release')]

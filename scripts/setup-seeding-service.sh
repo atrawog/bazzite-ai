@@ -78,7 +78,7 @@ cat > "${REPO_DIR}/.transmission-daemon.json" <<EOF
     "blocklist-enabled": false,
     "cache-size-mb": 16,
     "dht-enabled": true,
-    "download-dir": "${REPO_DIR}",
+    "download-dir": "${REPO_DIR}/releases",
     "download-queue-enabled": true,
     "download-queue-size": 5,
     "encryption": 1,
