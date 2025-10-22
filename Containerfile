@@ -7,8 +7,8 @@ COPY build_files /build_files
 
 FROM ${BASE_IMAGE}
 
-ARG IMAGE_NAME="${IMAGE_NAME:-bazzite-dx}"
-ARG IMAGE_VENDOR="{IMAGE_VENDOR:-ublue-os}"
+ARG IMAGE_NAME="${IMAGE_NAME:-bazzite-ai}"
+ARG IMAGE_VENDOR="${IMAGE_VENDOR:-atrawog}"
 
 RUN --mount=type=tmpfs,dst=/tmp \
   --mount=type=bind,from=ctx,source=/,target=/run/context \

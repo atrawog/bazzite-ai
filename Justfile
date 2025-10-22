@@ -1,5 +1,5 @@
-export repo_organization := env("GITHUB_REPOSITORY_OWNER", "ublue-os")
-export image_name := env("IMAGE_NAME", "bazzite-dx")
+export repo_organization := env("GITHUB_REPOSITORY_OWNER", "atrawog")
+export image_name := env("IMAGE_NAME", "bazzite-ai")
 export default_tag := env("DEFAULT_TAG", "latest")
 export bib_image := env("BIB_IMAGE", "quay.io/centos-bootc/bootc-image-builder:latest")
 export SUDO_DISPLAY := if `if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then echo true; fi` == "true" { "true" } else { "false" }

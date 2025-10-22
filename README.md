@@ -1,35 +1,33 @@
-# Bazzite Developer Edition
+# Bazzite AI
 
-[![Build Bazzite DX](https://github.com/ublue-os/bazzite-dx/actions/workflows/build.yml/badge.svg)](https://github.com/ublue-os/bazzite-dx/actions/workflows/build.yml)
+[![Build Bazzite AI](https://github.com/atrawog/bazzite-ai/actions/workflows/build.yml/badge.svg)](https://github.com/atrawog/bazzite-ai/actions/workflows/build.yml)
 
-This is just bazzite, but with extra developer-specific tooling, aiming to match [Bluefin DX](https://docs.projectbluefin.io/bluefin-dx/) and [Aurora DX](https://docs.getaurora.dev/dx/aurora-dx-intro) in functionality
-
-[`bazzite-gdx`](https://github.com/ublue-os/bazzite-gdx) will source from here and be focused for game development.
+This is a custom fork of [Bazzite DX](https://github.com/ublue-os/bazzite-dx) with AI/ML-focused tooling and customizations, building on top of Bazzite with extra developer-specific tools matching [Bluefin DX](https://docs.projectbluefin.io/bluefin-dx/) and [Aurora DX](https://docs.getaurora.dev/dx/aurora-dx-intro) in functionality.
 
 ## Installation
 
-To rebase an existing Bazzite installation to Bazzite DX, use one of the following commands based on your current variant:
+To rebase an existing Bazzite installation to Bazzite AI, use one of the following commands based on your current variant:
 
 **For KDE Plasma (default Bazzite):**
 ```bash
-rpm-ostree rebase ostree-image-signed:docker://ghcr.io/ublue-os/bazzite-dx:stable
+rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai:stable
 ```
 
 **For GNOME:**
 ```bash
-rpm-ostree rebase ostree-image-signed:docker://ghcr.io/ublue-os/bazzite-dx-gnome:stable
+rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai-gnome:stable
 ```
 
 ### NVIDIA Variants
 
 **For KDE Plasma with NVIDIA:**
 ```bash
-rpm-ostree rebase ostree-image-signed:docker://ghcr.io/ublue-os/bazzite-dx-nvidia:stable
+rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai-nvidia:stable
 ```
 
 **For GNOME with NVIDIA:**
 ```bash
-rpm-ostree rebase ostree-image-signed:docker://ghcr.io/ublue-os/bazzite-dx-nvidia-gnome:stable
+rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai-nvidia-gnome:stable
 ```
 
 To skip signature verification (not recommended unless you know what you're doing and why you're doing it), replace `ostree-image-signed:docker://ghcr.io` with `ostree-unverified-registry:ghcr.io`.
