@@ -110,3 +110,41 @@ toggle-gamemode ACTION="":
     fi
 
     echo -e "${green}${bold}Success:${normal} Default session set to $target_pretty. Reboot or log out to apply."
+
+# Setup GPU access for containers (NVIDIA variant only)
+setup-gpu-containers:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    # Check if nvidia-container-toolkit is installed
+    if ! command -v nvidia-ctk &> /dev/null; then
+        echo -e "${red}${bold}Error:${normal} nvidia-container-toolkit not found."
+        echo "This command requires bazzite-ai-nvidia (KDE variant)."
+        echo "bazzite-ai only supports KDE Plasma variants."
+        exit 1
+    fi
+
+    # Check for NVIDIA GPU
+    if ! lspci | grep -i nvidia &> /dev/null; then
+        echo -e "${yellow}${bold}Warning:${normal} No NVIDIA GPU detected."
+        echo "CDI configuration will still be generated but may not work."
+    fi
+
+    echo "Generating CDI configuration for GPU container access..."
+
+    # Generate CDI specification for Podman GPU passthrough
+    if [[ $EUID -ne 0 ]]; then
+        sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+    else
+        nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+    fi
+
+    echo -e "${green}${bold}Success:${normal} CDI configuration at /etc/cdi/nvidia.yaml"
+    echo ""
+    echo "GPU-accelerated containers now available:"
+    echo "  podman run --device nvidia.com/gpu=all <image>"
+    echo "  just run-devcontainer"
+    echo ""
+    echo "Test GPU access:"
+    echo "  just test-cuda-devcontainer"

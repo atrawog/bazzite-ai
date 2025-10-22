@@ -89,3 +89,19 @@ dnf5 install -y --enable-repo="docker-ce-stable" "${docker_pkgs[@]}" || {
 mkdir -p /etc/modules-load.d && cat >>/etc/modules-load.d/ip_tables.conf <<EOF
 iptable_nat
 EOF
+
+# Install NVIDIA Container Toolkit for GPU-enabled containers
+# Only for nvidia variants (KDE only - bazzite-ai only supports KDE)
+if [[ "$IMAGE_NAME" == *nvidia* ]]; then
+    echo "Installing NVIDIA Container Toolkit for GPU container support..."
+
+    # Fedora 42 official package: golang-github-nvidia-container-toolkit v1.17.4
+    # Fallback to COPR if unavailable
+    dnf5 install -y nvidia-container-toolkit || {
+        echo "::info::Falling back to COPR for nvidia-container-toolkit"
+        dnf5 copr enable -y @ai-ml/nvidia-container-toolkit
+        dnf5 install -y nvidia-container-toolkit
+    }
+
+    echo "NVIDIA Container Toolkit installed. CDI config generation available via ujust."
+fi

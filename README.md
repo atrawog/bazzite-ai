@@ -2,13 +2,28 @@
 
 [![Build Bazzite AI](https://github.com/atrawog/bazzite-ai/actions/workflows/build.yml/badge.svg)](https://github.com/atrawog/bazzite-ai/actions/workflows/build.yml)
 
-This is a custom fork of [Bazzite DX](https://github.com/ublue-os/bazzite-dx) with AI/ML-focused tooling and customizations, building on top of Bazzite with extra developer-specific tools matching [Bluefin DX](https://docs.projectbluefin.io/bluefin-dx/) and [Aurora DX](https://docs.getaurora.dev/dx/aurora-dx-intro) in functionality.
+This is a custom fork of [Bazzite DX](https://github.com/ublue-os/bazzite-dx) with AI/ML-focused tooling and customizations, building on top of Bazzite with extra developer-specific tools.
+
+**⚠️ Important**: Bazzite AI **only supports KDE Plasma**. GNOME variants are not officially supported.
+
+## Variants
+
+Bazzite AI provides **2 OS images** and **1 devcontainer image**:
+
+### OS Images (KDE Plasma)
+- **bazzite-ai** - For AMD/Intel GPUs
+- **bazzite-ai-nvidia** - For NVIDIA GPUs with container GPU support
+
+### Devcontainer
+- **bazzite-ai-devcontainer** - CUDA-enabled development container
+  - Safe isolated environment for AI/ML development
+  - Full GPU acceleration via NVIDIA Container Toolkit
+  - Perfect for Claude Code with `--dangerously-skip-permissions`
+  - All development tools from bazzite-ai-nvidia
+
+See [Devcontainer Guide](#devcontainer) below for details.
 
 ## Installation
-
-Bazzite AI is available in two variants, both with KDE Plasma desktop:
-- **bazzite-ai** - For AMD/Intel GPUs
-- **bazzite-ai-nvidia** - For NVIDIA GPUs
 
 ### Fresh Installation (ISO)
 
@@ -40,7 +55,51 @@ rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai-nvidia
 
 After running the rebase command, reboot your system to complete the installation.
 
-**Note:** To skip signature verification (not recommended), replace `ostree-image-signed:docker://ghcr.io` with `ostree-unverified-registry:ghcr.io`. 
+**Note:** To skip signature verification (not recommended), replace `ostree-image-signed:docker://ghcr.io` with `ostree-unverified-registry:ghcr.io`.
+
+## Devcontainer
+
+For isolated CUDA-accelerated development, use **bazzite-ai-devcontainer**:
+
+### Quick Start with VS Code
+
+```bash
+# 1. Open repository in VS Code
+code /path/to/bazzite-ai
+
+# 2. Command Palette (Ctrl+Shift+P) → "Reopen in Container"
+# 3. GPU is automatically configured!
+```
+
+### Standalone Usage
+
+```bash
+# Pull pre-built image
+just pull-devcontainer
+
+# Run with GPU
+just run-devcontainer
+
+# Or CPU-only mode
+just run-devcontainer-no-gpu
+```
+
+### Benefits
+
+- **Safe Isolation**: Run Claude Code with `--dangerously-skip-permissions` safely
+- **CUDA Support**: Full GPU acceleration for AI/ML workloads
+- **All Tools**: VS Code, Docker, Python, Node.js, BPF tools, and more
+- **Consistent**: Same environment across all machines
+
+### Requirements
+
+**For GPU acceleration**:
+- Must use **bazzite-ai-nvidia** (KDE variant) as host
+- Run `ujust setup-gpu-containers` once to enable GPU passthrough
+
+**Documentation**:
+- [Devcontainer Guide](docs/DEVCONTAINER.md) - Complete usage guide
+- [GPU Setup](docs/HOST-SETUP-GPU.md) - Host GPU configuration
 
 ## Acknowledgments
 

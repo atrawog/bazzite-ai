@@ -4,10 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is Bazzite AI - a custom fork of [Bazzite Developer Edition (DX)](https://github.com/ublue-os/bazzite-dx) with AI/ML-focused tooling and customizations. It's a container-based immutable Linux distribution built on top of [Bazzite](https://github.com/ublue-os/bazzite), extending it with developer tooling to match [Bluefin DX](https://docs.projectbluefin.io/bluefin-dx/) and [Aurora DX](https://docs.getaurora.dev/dx/aurora-dx-intro) functionality.
+This is Bazzite AI - a custom fork of [Bazzite Developer Edition (DX)](https://github.com/ublue-os/bazzite-dx) with AI/ML-focused tooling and customizations. It's a container-based immutable Linux distribution built on top of [Bazzite](https://github.com/ublue-os/bazzite), extending it with developer tooling.
+
+**⚠️ Important**: Bazzite AI **only supports KDE Plasma variants**. GNOME variants are not officially supported.
 
 Key technologies:
-- **Base**: ublue-os/bazzite-deck variants (KDE Plasma and GNOME, with/without NVIDIA)
+- **Base**: ublue-os/bazzite-deck (KDE Plasma) with/without NVIDIA
+- **Desktop**: KDE Plasma only
 - **Build System**: Containerfile-based OSTree image builds
 - **Task Runner**: Just (justfile)
 - **Package Manager**: dnf5, flatpak, homebrew (for fonts)
@@ -253,20 +256,72 @@ Users can download via:
 
 ## Image Variants
 
-The CI builds 4 variants from different base images:
-- `bazzite-ai` - KDE Plasma (from `bazzite-deck`)
-- `bazzite-ai-gnome` - GNOME (from `bazzite-deck-gnome`)
-- `bazzite-ai-nvidia` - KDE with NVIDIA drivers (from `bazzite-deck-nvidia`)
-- `bazzite-ai-nvidia-gnome` - GNOME with NVIDIA (from `bazzite-deck-nvidia-gnome`)
+Bazzite AI builds **2 KDE Plasma variants** (GNOME is not supported):
+
+- **bazzite-ai** - KDE Plasma (from `bazzite-deck`)
+- **bazzite-ai-nvidia** - KDE Plasma with NVIDIA drivers (from `bazzite-deck-nvidia`)
+
+⚠️ **Note**: Only KDE variants are officially supported. Any GNOME builds in CI are experimental/unofficial.
+
+## Devcontainer Variant
+
+**bazzite-ai-devcontainer** - CUDA-enabled development container
+
+### Purpose
+- Safe isolated environment for Claude Code with `--dangerously-skip-permissions`
+- CUDA-accelerated AI/ML workflows
+- Consistent development environment
+- No systemd overhead - pure tooling
+
+### Base Image
+- `nvidia/cuda:12.6.3-devel-fedora42`
+- All tools from bazzite-ai-nvidia (KDE)
+- VS Code devcontainer optimized
+
+### Host Requirements
+
+**For GPU acceleration**:
+1. Must use **bazzite-ai-nvidia** (KDE variant only)
+2. nvidia-container-toolkit (pre-installed)
+3. CDI config via `ujust setup-gpu-containers`
+
+See `docs/HOST-SETUP-GPU.md`.
+
+### Justfile Commands
+
+```bash
+just pull-devcontainer [tag]    # Pull from GHCR
+just build-devcontainer [tag]   # Build locally
+just run-devcontainer [tag]     # Run with GPU
+just test-cuda-devcontainer     # Test CUDA
+just run-devcontainer-no-gpu    # CPU only
+```
+
+### VS Code Usage
+
+1. Install Dev Containers extension
+2. Open repo in VS Code
+3. Command Palette → "Reopen in Container"
+4. GPU auto-configured
+
+See `docs/DEVCONTAINER.md`.
+
+### ujust Commands
+
+On bazzite-ai-nvidia (KDE):
+
+```bash
+ujust setup-gpu-containers  # One-time GPU setup
+```
 
 ## Key Modifications from Base Bazzite
 
-Developer-focused changes made in `build_files/20-install-apps.sh`:
+Developer-focused changes for **KDE Plasma variants** in `build_files/20-install-apps.sh`:
 
 1. **Removed Gaming Defaults**:
    - Disabled autologin to Steam Game Mode
    - Removed SDDM steamos configs
-   - Re-enabled login screens (GDM for GNOME, SDDM for KDE)
+   - Re-enabled SDDM login screens (KDE)
    - Re-enabled user switching and lock screen in KDE
 
 2. **Added Developer Tools**:
@@ -274,6 +329,7 @@ Developer-focused changes made in `build_files/20-install-apps.sh`:
    - Docker CE + docker-compose
    - BPF tools (bpftrace, bpftop, bcc)
    - Container tools (podman-machine, podman-tui)
+   - **nvidia-container-toolkit** (nvidia variant only)
    - Android tools (android-tools, usbmuxd)
    - Cloud tools (restic, rclone)
    - Development utilities (ccache, flatpak-builder, qemu-kvm)
@@ -302,6 +358,13 @@ Developer-focused changes made in `build_files/20-install-apps.sh`:
 - `scripts/setup-seeding-service.sh` - Sets up systemd seeding service
 - `scripts/create-release.sh` - Automated release creation script
 
+**Devcontainer:**
+- `Containerfile.devcontainer` - CUDA devcontainer build
+- `.devcontainer/*.json` - VS Code configurations
+- `build_files/devcontainer/install-devcontainer-tools.sh` - Tool installation
+- `docs/DEVCONTAINER.md` - Usage guide
+- `docs/HOST-SETUP-GPU.md` - GPU setup (nvidia variant)
+
 **Documentation:**
 - `docs/ISO-BUILD.md` - Comprehensive ISO building guide
 - `CLAUDE.md` - This file, guidance for Claude Code
@@ -311,10 +374,11 @@ Developer-focused changes made in `build_files/20-install-apps.sh`:
 GitHub Actions workflow (`.github/workflows/build.yml`):
 1. Checks out code and sets up BTRFS storage
 2. Fetches base image version from upstream Bazzite
-3. Builds all 4 variants in parallel using buildah
-4. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
-5. Pushes to ghcr.io/atrawog/bazzite-ai*
-6. Signs images with cosign (using SIGNING_SECRET)
+3. Builds KDE variants in parallel using buildah (bazzite-ai, bazzite-ai-nvidia)
+4. Builds bazzite-ai-devcontainer (CUDA-enabled development container)
+5. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
+6. Pushes to ghcr.io/atrawog/bazzite-ai* and ghcr.io/atrawog/bazzite-ai-devcontainer
+7. Signs images with cosign (using SIGNING_SECRET)
 
 ## End-User Commands
 
@@ -324,12 +388,17 @@ Users of the built image can run these ujust commands (defined in `system_files/
 # Install extra fonts via Homebrew
 ujust install-fonts
 
-# Toggle between Steam Game Mode and Desktop session on boot
+# Toggle between Steam Game Mode and Desktop session on boot (KDE only)
 ujust toggle-gamemode [gamemode|desktop|status|help]
+
+# Setup GPU access for containers (bazzite-ai-nvidia KDE only)
+ujust setup-gpu-containers
 ```
 
 ## Important Notes
 
+- **KDE Only**: Bazzite AI only supports KDE Plasma variants, not GNOME.
+- **NVIDIA Variant**: GPU container support requires bazzite-ai-nvidia (KDE).
 - **Immutable Base**: This builds an immutable OS. Changes go in `build_files/` scripts or `system_files/` configs.
 - **Rootful Podman**: VM/ISO builds require rootful podman access (sudo).
 - **Podman Preferred**: The justfile auto-detects podman or docker, preferring podman.

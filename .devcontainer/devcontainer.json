@@ -1,0 +1,33 @@
+{
+  "name": "Bazzite AI Devcontainer (CUDA)",
+  "build": {
+    "dockerfile": "../Containerfile.devcontainer",
+    "context": "..",
+    "args": {
+      "CUDA_VERSION": "12.6.3",
+      "FEDORA_VERSION": "42"
+    }
+  },
+  "hostRequirements": {
+    "gpu": "optional"
+  },
+  "runArgs": [
+    "--device=nvidia.com/gpu=all",
+    "--security-opt=label=disable"
+  ],
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "ms-python.python",
+        "ms-vscode.cpptools",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "remoteUser": "devuser",
+  "postCreateCommand": "nvidia-smi || echo 'No GPU detected - CUDA workloads will not be available'"
+}

@@ -218,6 +218,65 @@ run-vm-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_run-
 [group('Run Virtual Machine')]
 run-vm-iso-nvidia $target_image=("localhost/" + image_name + "-nvidia") $tag=default_tag: && (_run-vm target_image tag "iso" "image-builder-iso.config.toml")
 
+# Build devcontainer image locally
+[group('Devcontainer')]
+build-devcontainer $tag=default_tag:
+    ${PODMAN} build \
+      -f Containerfile.devcontainer \
+      --build-arg CUDA_VERSION=12.6.3 \
+      --build-arg FEDORA_VERSION=42 \
+      --tag "bazzite-ai-devcontainer:${tag}" \
+      .
+
+# Rebuild devcontainer (no cache)
+[group('Devcontainer')]
+rebuild-devcontainer $tag=default_tag:
+    ${PODMAN} build --no-cache \
+      -f Containerfile.devcontainer \
+      --build-arg CUDA_VERSION=12.6.3 \
+      --build-arg FEDORA_VERSION=42 \
+      --tag "bazzite-ai-devcontainer:${tag}" \
+      .
+
+# Run devcontainer with GPU
+[group('Devcontainer')]
+run-devcontainer $tag=default_tag:
+    ${PODMAN} run --rm -it \
+      --device nvidia.com/gpu=all \
+      --security-opt label=disable \
+      -v $(pwd):/workspace:Z \
+      -w /workspace \
+      "bazzite-ai-devcontainer:${tag}" \
+      /bin/zsh
+
+# Test CUDA in devcontainer
+[group('Devcontainer')]
+test-cuda-devcontainer $tag=default_tag:
+    ${PODMAN} run --rm \
+      --device nvidia.com/gpu=all \
+      "bazzite-ai-devcontainer:${tag}" \
+      nvidia-smi
+
+# Run devcontainer without GPU
+[group('Devcontainer')]
+run-devcontainer-no-gpu $tag=default_tag:
+    ${PODMAN} run --rm -it \
+      -v $(pwd):/workspace:Z \
+      -w /workspace \
+      "bazzite-ai-devcontainer:${tag}" \
+      /bin/zsh
+
+# Pull pre-built devcontainer
+[group('Devcontainer')]
+pull-devcontainer $tag=default_tag:
+    ${PODMAN} pull "ghcr.io/${repo_organization}/bazzite-ai-devcontainer:${tag}"
+
+# Clean devcontainer images
+[group('Devcontainer')]
+clean-devcontainer:
+    ${PODMAN} rmi bazzite-ai-devcontainer || true
+    ${PODMAN} rmi ghcr.io/${repo_organization}/bazzite-ai-devcontainer || true
+
 # Private helper: Generate date-based release tag
 [private]
 _release-tag:
