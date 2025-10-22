@@ -398,6 +398,34 @@ GitHub Actions workflow (`.github/workflows/build.yml`):
 
 Users of the built image can run these ujust commands (defined in `system_files/usr/share/ublue-os/just/95-bazzite-ai.just`):
 
+### Flatpak Management (38 total flatpaks)
+```bash
+# Install all flatpaks at once
+ujust install-flatpaks-all
+
+# Or install by category:
+ujust install-flatpaks-dev             # Development tools (8 apps)
+ujust install-flatpaks-media           # Media & graphics (9 apps)
+ujust install-flatpaks-gaming          # Gaming tools (4 apps)
+ujust install-flatpaks-communication   # Chat apps (3 apps)
+ujust install-flatpaks-productivity    # Browsers & office (7 apps)
+ujust install-flatpaks-utilities       # Remote & download tools (5 apps)
+ujust install-flatpaks-experimental    # Experimental apps (2 apps)
+```
+
+### Development Tools
+```bash
+# Install pixi package manager (user home directory)
+ujust install-pixi
+
+# Install devcontainers CLI (user home directory)
+ujust install-devcontainers-cli
+
+# Install both pixi and devcontainers CLI
+ujust install-dev-tools
+```
+
+### System Configuration
 ```bash
 # Install extra fonts via Homebrew
 ujust install-fonts
@@ -407,6 +435,12 @@ ujust toggle-gamemode [gamemode|desktop|status|help]
 
 # Setup GPU access for containers (bazzite-ai-nvidia KDE only)
 ujust setup-gpu-containers
+
+# Install Claude Code CLI (user home directory)
+ujust install-claude-code
+
+# Check Claude Code installation and version
+ujust check-claude-code
 ```
 
 ## Important Notes

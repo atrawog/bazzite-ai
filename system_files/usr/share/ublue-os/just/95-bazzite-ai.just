@@ -204,3 +204,272 @@ check-claude-code:
         echo "To install: ujust install-claude-code"
         exit 1
     fi
+
+# Install development tools flatpaks
+install-flatpaks-dev:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Development Tools Flatpaks${normal}"
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+    APPS=("org.flatpak.Builder.BaseApp" "io.podman_desktop.PodmanDesktop" "io.github.dvlv.boxbuddyrs" "io.github.flattool.Warehouse" "it.mijorus.gearlever" "com.github.tchx84.Flatseal" "org.sqlitebrowser.sqlitebrowser" "org.virt_manager.virt-manager")
+    for app in "${APPS[@]}"; do
+        if ! flatpak list --columns=application | grep -q "^${app}$"; then
+            echo -e "  ${bold}Installing ${app}...${normal}"
+            flatpak install --system -y flathub "$app" || echo -e "  ${yellow}⚠ Failed: ${app}${normal}"
+        else
+            echo -e "  ${green}✓ ${app}${normal}"
+        fi
+    done
+    echo -e "${green}${bold}Done!${normal}"
+
+# Install media and graphics flatpaks
+install-flatpaks-media:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Media & Graphics Flatpaks${normal}"
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+    APPS=("org.blender.Blender" "org.gimp.GIMP" "org.inkscape.Inkscape" "org.kde.kdenlive" "org.kde.haruna" "org.kde.gwenview" "com.prusa3d.PrusaSlicer" "com.github.iwalton3.jellyfin-media-player" "org.jellyfin.JellyfinServer")
+    for app in "${APPS[@]}"; do
+        if ! flatpak list --columns=application | grep -q "^${app}$"; then
+            echo -e "  ${bold}Installing ${app}...${normal}"
+            flatpak install --system -y flathub "$app" || echo -e "  ${yellow}⚠ Failed: ${app}${normal}"
+        else
+            echo -e "  ${green}✓ ${app}${normal}"
+        fi
+    done
+    echo -e "${green}${bold}Done!${normal}"
+
+# Install gaming tools flatpaks
+install-flatpaks-gaming:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Gaming Tools Flatpaks${normal}"
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+    APPS=("com.github.Matoking.protontricks" "io.github.fastrizwaan.WineZGUI" "net.davidotek.pupgui2" "net.supertuxkart.SuperTuxKart")
+    for app in "${APPS[@]}"; do
+        if ! flatpak list --columns=application | grep -q "^${app}$"; then
+            echo -e "  ${bold}Installing ${app}...${normal}"
+            flatpak install --system -y flathub "$app" || echo -e "  ${yellow}⚠ Failed: ${app}${normal}"
+        else
+            echo -e "  ${green}✓ ${app}${normal}"
+        fi
+    done
+    echo -e "${green}${bold}Done!${normal}"
+
+# Install communication flatpaks
+install-flatpaks-communication:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Communication Flatpaks${normal}"
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+    APPS=("com.discordapp.Discord" "org.signal.Signal" "org.squidowl.halloy")
+    for app in "${APPS[@]}"; do
+        if ! flatpak list --columns=application | grep -q "^${app}$"; then
+            echo -e "  ${bold}Installing ${app}...${normal}"
+            flatpak install --system -y flathub "$app" || echo -e "  ${yellow}⚠ Failed: ${app}${normal}"
+        else
+            echo -e "  ${green}✓ ${app}${normal}"
+        fi
+    done
+    echo -e "${green}${bold}Done!${normal}"
+
+# Install productivity flatpaks
+install-flatpaks-productivity:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Productivity Flatpaks${normal}"
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+    APPS=("org.mozilla.firefox" "com.google.Chrome" "org.kde.kcalc" "org.kde.kcolorchooser" "org.kde.filelight" "org.kde.okular" "org.qgis.qgis")
+    for app in "${APPS[@]}"; do
+        if ! flatpak list --columns=application | grep -q "^${app}$"; then
+            echo -e "  ${bold}Installing ${app}...${normal}"
+            flatpak install --system -y flathub "$app" || echo -e "  ${yellow}⚠ Failed: ${app}${normal}"
+        else
+            echo -e "  ${green}✓ ${app}${normal}"
+        fi
+    done
+    echo -e "${green}${bold}Done!${normal}"
+
+# Install utilities flatpaks
+install-flatpaks-utilities:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Utilities Flatpaks${normal}"
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+    APPS=("org.remmina.Remmina" "org.kde.krdc" "com.github.unrud.VideoDownloader" "de.leopoldluley.Clapgrep" "org.fkoehler.KTailctl")
+    for app in "${APPS[@]}"; do
+        if ! flatpak list --columns=application | grep -q "^${app}$"; then
+            echo -e "  ${bold}Installing ${app}...${normal}"
+            flatpak install --system -y flathub "$app" || echo -e "  ${yellow}⚠ Failed: ${app}${normal}"
+        else
+            echo -e "  ${green}✓ ${app}${normal}"
+        fi
+    done
+    echo -e "${green}${bold}Done!${normal}"
+
+# Install experimental flatpaks
+install-flatpaks-experimental:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Experimental Flatpaks${normal}"
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+    APPS=("io.github.Dretch.MonomerFlatpakExample" "com.parsecgaming.parsec")
+    for app in "${APPS[@]}"; do
+        if ! flatpak list --columns=application | grep -q "^${app}$"; then
+            echo -e "  ${bold}Installing ${app}...${normal}"
+            flatpak install --system -y flathub "$app" || echo -e "  ${yellow}⚠ Failed: ${app}${normal}"
+        else
+            echo -e "  ${green}✓ ${app}${normal}"
+        fi
+    done
+    echo -e "${green}${bold}Done!${normal}"
+
+# Install all flatpaks
+install-flatpaks-all:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing All Flatpaks (38 total)${normal}"
+    echo ""
+
+    just install-flatpaks-dev
+    just install-flatpaks-media
+    just install-flatpaks-gaming
+    just install-flatpaks-communication
+    just install-flatpaks-productivity
+    just install-flatpaks-utilities
+    just install-flatpaks-experimental
+
+    echo ""
+    echo -e "${green}${bold}✓ All flatpaks installed!${normal}"
+
+# Install pixi package manager
+install-pixi:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing pixi.sh${normal}"
+    echo "Modern package manager for conda ecosystem"
+    echo "Location: $HOME/.pixi/bin/pixi"
+    echo ""
+
+    # Check if already installed
+    if command -v pixi &> /dev/null; then
+        echo -e "${green}✓ pixi already installed${normal}"
+        pixi --version
+        echo ""
+        echo "To update: pixi self-update"
+        exit 0
+    fi
+
+    # Install to user home directory
+    export PIXI_HOME="$HOME/.pixi"
+    curl -fsSL https://pixi.sh/install.sh | bash -s -- --yes
+
+    if [ -f "$PIXI_HOME/bin/pixi" ]; then
+        echo ""
+        echo -e "${green}${bold}✓ Success:${normal} pixi installed"
+        "$PIXI_HOME/bin/pixi" --version
+        echo ""
+        echo -e "${bold}Usage:${normal}"
+        echo "  pixi --help"
+        echo "  pixi init my-project"
+        echo ""
+        echo -e "${yellow}Note:${normal} Restart your shell or run: source ~/.bashrc"
+    else
+        echo -e "${red}${bold}✗ Error:${normal} Installation failed"
+        exit 1
+    fi
+
+# Install devcontainers CLI
+install-devcontainers-cli:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing devcontainers CLI${normal}"
+    echo "Container development automation tool"
+    echo ""
+
+    # Check if already installed
+    if command -v devcontainer &> /dev/null; then
+        echo -e "${green}✓ devcontainer already installed${normal}"
+        devcontainer --version
+        echo ""
+        echo "To update: npm update -g @devcontainers/cli"
+        exit 0
+    fi
+
+    # Configure npm to use user directory if not already set
+    if [ "$(npm config get prefix)" = "/usr" ] || [ "$(npm config get prefix)" = "/usr/local" ]; then
+        echo "Configuring npm to use user directory..."
+        npm config set prefix "$HOME/.npm-global"
+
+        # Add to PATH if not already there
+        if ! grep -q ".npm-global/bin" "$HOME/.bashrc" 2>/dev/null; then
+            echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> "$HOME/.bashrc"
+        fi
+    fi
+
+    # Install devcontainers CLI
+    echo "Installing @devcontainers/cli..."
+    npm install -g @devcontainers/cli
+
+    if command -v devcontainer &> /dev/null; then
+        echo ""
+        echo -e "${green}${bold}✓ Success:${normal} devcontainers CLI installed"
+        devcontainer --version
+        echo ""
+        echo -e "${bold}Usage:${normal}"
+        echo "  devcontainer --help"
+        echo "  devcontainer build --workspace-folder ."
+        echo ""
+        echo -e "${yellow}Note:${normal} Restart your shell or run: source ~/.bashrc"
+    else
+        echo -e "${red}${bold}✗ Error:${normal} Installation failed"
+        echo "You may need to add ~/.npm-global/bin to your PATH"
+        exit 1
+    fi
+
+# Install all development tools (pixi + devcontainers CLI)
+install-dev-tools:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Development Tools${normal}"
+    echo ""
+
+    # Install pixi
+    echo "1/2 Installing pixi..."
+    just install-pixi
+
+    echo ""
+    echo "2/2 Installing devcontainers CLI..."
+    just install-devcontainers-cli
+
+    echo ""
+    echo -e "${green}${bold}✓ All development tools installed${normal}"
