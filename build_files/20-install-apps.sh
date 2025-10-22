@@ -82,6 +82,7 @@ dnf5 install -y \
     transmission-cli \
     transmission-daemon \
     transmission-qt \
+    mktorrent \
     usbmuxd \
     vlc \
     wireshark \
