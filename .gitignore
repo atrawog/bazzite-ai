@@ -36,3 +36,10 @@ SHA256SUMS
 *.tmp
 *.log
 *.bak
+
+# Transmission daemon files (created by seeding service)
+bandwidth-groups.json
+dht.dat
+resume/
+settings.json
+
