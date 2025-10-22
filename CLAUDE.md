@@ -356,10 +356,10 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 **External Repositories:**
 - `vscode` - Microsoft repository for VS Code
 - `docker-ce-stable` - Docker CE repository
-- `microsoft-prod` - Microsoft .NET SDK repository
-- `copr:kylegospo:coolercontrol` - CoolerControl COPR (hardware monitoring for AIOs/fan hubs)
-- `copr:pgdev:ghostty` - Ghostty terminal COPR
+- `copr:codifryed:CoolerControl` - CoolerControl COPR (hardware monitoring for AIOs/fan hubs)
+- `copr:scottames:ghostty` - Ghostty terminal COPR
 - All external repos disabled by default, enabled only during installation
+- .NET SDK 9.0 available in standard Fedora 42 repos (no external repo needed)
 
 **ISO/VM Images:**
 - `image.toml` - Minimal config for VM/raw images (20GB root partition)
