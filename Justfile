@@ -252,6 +252,7 @@ run-devcontainer $tag=default_tag:
 test-cuda-devcontainer $tag=default_tag:
     ${PODMAN} run --rm \
       --device nvidia.com/gpu=all \
+      --security-opt label=disable \
       "bazzite-ai-devcontainer:${tag}" \
       nvidia-smi
 
