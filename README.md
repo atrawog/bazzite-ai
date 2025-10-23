@@ -8,20 +8,24 @@ This is a custom fork of [Bazzite DX](https://github.com/ublue-os/bazzite-dx) wi
 
 ## Variants
 
-Bazzite AI provides **2 OS images** and **1 devcontainer image**:
+Bazzite AI provides **2 OS images** and **2 container images**:
 
 ### OS Images (KDE Plasma)
 - **bazzite-ai** - For AMD/Intel GPUs
 - **bazzite-ai-nvidia** - For NVIDIA GPUs with container GPU support
 
-### Devcontainer
-- **bazzite-ai-devcontainer** - CUDA-enabled development container
-  - Safe isolated environment for AI/ML development
+### Container Images
+- **bazzite-ai-container** - Base CPU-only development container
+  - Clean Fedora 42 base with all dev tools
+  - No NVIDIA/CUDA dependencies
+  - Perfect for CPU-only development
+- **bazzite-ai-container-nvidia** - GPU-accelerated container (builds on base)
+  - Adds cuDNN and TensorRT for ML acceleration
   - Full GPU acceleration via NVIDIA Container Toolkit
+  - Safe isolated environment for AI/ML development
   - Perfect for Claude Code with `--dangerously-skip-permissions`
-  - All development tools from bazzite-ai-nvidia
 
-See [Devcontainer Guide](#devcontainer) below for details.
+See [Container Guide](#development-container) below for details.
 
 ## Installation
 
@@ -59,18 +63,23 @@ After running the rebase command, reboot your system to complete the installatio
 
 ## Development Container
 
-For isolated AI/ML development, use **bazzite-ai-devcontainer**:
+Bazzite AI provides two container variants for isolated development:
+
+- **bazzite-ai-container** - Base CPU-only container
+- **bazzite-ai-container-nvidia** - GPU-accelerated container with cuDNN/TensorRT
 
 ### Quick Start with Apptainer (Recommended for HPC/Research)
 
 Apptainer provides single-file containers (.sif) ideal for reproducible research:
 
+#### GPU Development (NVIDIA)
+
 ```bash
-# 1. Pull the devcontainer
-ujust apptainer-pull-devcontainer
+# 1. Pull the NVIDIA container
+ujust apptainer-pull-container-nvidia
 
 # 2. Run with GPU support (auto-detected)
-ujust apptainer-run-devcontainer
+ujust apptainer-run-container-nvidia
 
 # 3. Your workspace is mounted at /workspace
 # Inside container:
@@ -78,48 +87,81 @@ cd /workspace
 nvidia-smi  # Test GPU
 ```
 
+#### CPU-Only Development
+
+```bash
+# 1. Pull the base container
+ujust apptainer-pull-container
+
+# 2. Run without GPU
+ujust apptainer-run-container
+
+# 3. Your workspace is mounted at /workspace
+# Inside container:
+cd /workspace
+python script.py  # Run your code
+```
+
 **Benefits:**
 - ✅ Single .sif file - easy to archive and share
 - ✅ Native GPU support via `--nv` (no setup needed)
 - ✅ HPC/cluster friendly (no daemon, no root)
 - ✅ Auto-mounts your workspace directory
+- ✅ Separate base/nvidia containers for optimal efficiency
 
 ### Alternative: VS Code Dev Containers
 
 For VS Code users, traditional Docker/Podman workflow:
 
+#### GPU Development
 ```bash
 # 1. Open repository in VS Code
 code /path/to/bazzite-ai
 
 # 2. Command Palette (Ctrl+Shift+P) → "Reopen in Container"
-# 3. GPU automatically detected
+# 3. GPU automatically detected (uses NVIDIA variant)
 ```
 
-Uses pre-built image from GitHub Container Registry.
+#### CPU-Only Development
+```bash
+# 1. Open repository in VS Code
+code /path/to/bazzite-ai
+
+# 2. Open Container Configuration File
+# Command Palette → "Open Container Configuration File"
+# Select .devcontainer/devcontainer-base.json
+
+# 3. Command Palette → "Reopen in Container"
+```
+
+Uses pre-built images from GitHub Container Registry.
 
 ### Manual Apptainer Usage
 
 ```bash
-# Pull specific version
-ujust apptainer-pull-devcontainer stable
+# GPU Development
+ujust apptainer-pull-container-nvidia stable
+ujust apptainer-run-container-nvidia latest /path/to/project
+ujust apptainer-exec-container-nvidia "python train.py"
 
-# Run with custom workspace
-ujust apptainer-run-devcontainer latest /path/to/project
-
-# CPU-only mode
-ujust apptainer-run-devcontainer-cpu
-
-# Execute single command
-ujust apptainer-exec-devcontainer "python train.py"
+# CPU-Only Development
+ujust apptainer-pull-container stable
+ujust apptainer-run-container latest /path/to/project
 ```
 
 ### Container Features
 
-- **Full CUDA Support**: GPU acceleration for AI/ML workloads
-- **All Dev Tools**: VS Code, Docker, Python, Node.js, Claude Code, and more
-- **Safe Isolation**: Run `claude --dangerously-skip-permissions` safely
-- **Consistent Environment**: Same tools across all machines
+**Base Container (bazzite-ai-container)**:
+- Clean Fedora 42 base with all dev tools
+- VS Code, Docker, Python, Node.js, Claude Code
+- No NVIDIA/CUDA overhead
+- Perfect for CPU-only development
+
+**NVIDIA Container (bazzite-ai-container-nvidia)**:
+- Everything from base container
+- cuDNN and TensorRT for ML acceleration
+- Full CUDA support for GPU workloads
+- Safe isolation for `claude --dangerously-skip-permissions`
 
 ### Requirements
 
@@ -134,7 +176,7 @@ ujust apptainer-exec-devcontainer "python train.py"
 
 **For CPU-only**: Works on any bazzite-ai variant.
 
-See [DEVCONTAINER.md](docs/DEVCONTAINER.md) for comprehensive guide.
+See [CONTAINER.md](docs/CONTAINER.md) for comprehensive guide.
 
 ## Running Windows Applications
 

@@ -474,39 +474,63 @@ install-dev-tools:
     echo ""
     echo -e "${green}${bold}✓ All development tools installed${normal}"
 
-# Pull bazzite-ai-devcontainer using Apptainer
-apptainer-pull-devcontainer tag="latest":
+# Pull bazzite-ai-container-nvidia using Apptainer
+apptainer-pull-container-nvidia tag="latest":
     #!/usr/bin/bash
     set -euo pipefail
     source /usr/lib/ujust/ujust.sh 2>/dev/null || true
 
     TAG="{{ tag }}"
-    OUTPUT_NAME="bazzite-ai-devcontainer_${TAG}.sif"
+    OUTPUT_NAME="bazzite-ai-container-nvidia_${TAG}.sif"
 
-    echo -e "${bold}Pulling bazzite-ai-devcontainer via Apptainer${normal}"
-    echo "Registry: ghcr.io/atrawog/bazzite-ai-devcontainer:${TAG}"
+    echo -e "${bold}Pulling bazzite-ai-container-nvidia via Apptainer${normal}"
+    echo "Registry: ghcr.io/atrawog/bazzite-ai-container-nvidia:${TAG}"
     echo "Output: $HOME/${OUTPUT_NAME}"
     echo ""
 
     cd "$HOME"
-    apptainer pull "docker://ghcr.io/atrawog/bazzite-ai-devcontainer:${TAG}"
+    apptainer pull "docker://ghcr.io/atrawog/bazzite-ai-container-nvidia:${TAG}"
 
     echo ""
     echo -e "${green}${bold}✓ Success${normal}"
     echo "Container saved: $HOME/${OUTPUT_NAME}"
     echo ""
     echo "Run with:"
-    echo "  ujust apptainer-run-devcontainer"
+    echo "  ujust apptainer-run-container-nvidia"
 
-# Run bazzite-ai-devcontainer with Apptainer (GPU enabled)
-apptainer-run-devcontainer tag="latest" workspace="":
+# Pull bazzite-ai-container (base, CPU-only) using Apptainer
+apptainer-pull-container tag="latest":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    TAG="{{ tag }}"
+    OUTPUT_NAME="bazzite-ai-container_${TAG}.sif"
+
+    echo -e "${bold}Pulling bazzite-ai-container (base, CPU-only) via Apptainer${normal}"
+    echo "Registry: ghcr.io/atrawog/bazzite-ai-container:${TAG}"
+    echo "Output: $HOME/${OUTPUT_NAME}"
+    echo ""
+
+    cd "$HOME"
+    apptainer pull "docker://ghcr.io/atrawog/bazzite-ai-container:${TAG}"
+
+    echo ""
+    echo -e "${green}${bold}✓ Success${normal}"
+    echo "Container saved: $HOME/${OUTPUT_NAME}"
+    echo ""
+    echo "Run with:"
+    echo "  ujust apptainer-run-container"
+
+# Run bazzite-ai-container-nvidia with Apptainer (GPU enabled)
+apptainer-run-container-nvidia tag="latest" workspace="":
     #!/usr/bin/bash
     set -euo pipefail
     source /usr/lib/ujust/ujust.sh 2>/dev/null || true
 
     TAG="{{ tag }}"
     WORKSPACE="{{ workspace }}"
-    SIF_FILE="$HOME/bazzite-ai-devcontainer_${TAG}.sif"
+    SIF_FILE="$HOME/bazzite-ai-container-nvidia_${TAG}.sif"
 
     # Default workspace to current directory
     if [[ -z "${WORKSPACE}" ]]; then
@@ -517,10 +541,10 @@ apptainer-run-devcontainer tag="latest" workspace="":
     if [[ ! -f "${SIF_FILE}" ]]; then
         echo -e "${yellow}Container not found: ${SIF_FILE}${normal}"
         echo "Pulling from GHCR..."
-        just apptainer-pull-devcontainer "${TAG}"
+        just apptainer-pull-container-nvidia "${TAG}"
     fi
 
-    echo -e "${bold}Starting bazzite-ai-devcontainer${normal}"
+    echo -e "${bold}Starting bazzite-ai-container-nvidia${normal}"
     echo "Workspace: ${WORKSPACE}"
     echo ""
 
@@ -544,15 +568,15 @@ apptainer-run-devcontainer tag="latest" workspace="":
         --pwd /workspace \
         "${SIF_FILE}"
 
-# Run bazzite-ai-devcontainer with Apptainer (CPU only)
-apptainer-run-devcontainer-cpu tag="latest" workspace="":
+# Run bazzite-ai-container with Apptainer (base, CPU only)
+apptainer-run-container tag="latest" workspace="":
     #!/usr/bin/bash
     set -euo pipefail
     source /usr/lib/ujust/ujust.sh 2>/dev/null || true
 
     TAG="{{ tag }}"
     WORKSPACE="{{ workspace }}"
-    SIF_FILE="$HOME/bazzite-ai-devcontainer_${TAG}.sif"
+    SIF_FILE="$HOME/bazzite-ai-container_${TAG}.sif"
 
     if [[ -z "${WORKSPACE}" ]]; then
         WORKSPACE="$(pwd)"
@@ -560,10 +584,10 @@ apptainer-run-devcontainer-cpu tag="latest" workspace="":
 
     if [[ ! -f "${SIF_FILE}" ]]; then
         echo "Pulling container..."
-        just apptainer-pull-devcontainer "${TAG}"
+        just apptainer-pull-container "${TAG}"
     fi
 
-    echo -e "${bold}Starting bazzite-ai-devcontainer (CPU-only)${normal}"
+    echo -e "${bold}Starting bazzite-ai-container (base, CPU-only)${normal}"
 
     apptainer shell \
         --writable-tmpfs \
@@ -571,22 +595,22 @@ apptainer-run-devcontainer-cpu tag="latest" workspace="":
         --pwd /workspace \
         "${SIF_FILE}"
 
-# Execute command in bazzite-ai-devcontainer via Apptainer
-apptainer-exec-devcontainer cmd tag="latest" workspace="":
+# Execute command in bazzite-ai-container-nvidia via Apptainer
+apptainer-exec-container-nvidia cmd tag="latest" workspace="":
     #!/usr/bin/bash
     set -euo pipefail
 
     TAG="{{ tag }}"
     CMD="{{ cmd }}"
     WORKSPACE="{{ workspace }}"
-    SIF_FILE="$HOME/bazzite-ai-devcontainer_${TAG}.sif"
+    SIF_FILE="$HOME/bazzite-ai-container-nvidia_${TAG}.sif"
 
     if [[ -z "${WORKSPACE}" ]]; then
         WORKSPACE="$(pwd)"
     fi
 
     if [[ ! -f "${SIF_FILE}" ]]; then
-        echo "Container not found. Run: ujust apptainer-pull-devcontainer"
+        echo "Container not found. Run: ujust apptainer-pull-container-nvidia"
         exit 1
     fi
 
@@ -624,9 +648,14 @@ apptainer-info:
     fi
 
     echo ""
-    echo -e "${bold}Quick Start with bazzite-ai-devcontainer:${normal}"
-    echo "  ujust apptainer-pull-devcontainer   # Download container"
-    echo "  ujust apptainer-run-devcontainer    # Interactive shell"
+    echo -e "${bold}Quick Start:${normal}"
+    echo "  # GPU Development (NVIDIA)"
+    echo "  ujust apptainer-pull-container-nvidia   # Download NVIDIA container"
+    echo "  ujust apptainer-run-container-nvidia    # Interactive shell with GPU"
+    echo ""
+    echo "  # CPU-Only Development"
+    echo "  ujust apptainer-pull-container          # Download base container"
+    echo "  ujust apptainer-run-container           # Interactive shell (CPU)"
     echo ""
     echo "Documentation: https://apptainer.org/docs/"
 

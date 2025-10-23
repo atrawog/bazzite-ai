@@ -46,15 +46,20 @@ The `build_files/build.sh` orchestrator runs scripts in numerical order:
 
 All variants include **Apptainer** (formerly Singularity) for HPC-style container workflows:
 
-- **Primary Container**: `bazzite-ai-devcontainer` via Apptainer
+- **Container Variants**: `bazzite-ai-container` (base) and `bazzite-ai-container-nvidia` (GPU)
 - **GPU Support**: Native via `--nv` flag (no nvidia-container-toolkit needed)
 - **Format**: Single .sif files for reproducibility
 - **Use Cases**: Research, compute clusters, scientific computing
 
 Quick usage:
 ```bash
-ujust apptainer-pull-devcontainer   # Download devcontainer
-ujust apptainer-run-devcontainer    # Interactive shell with GPU
+# GPU Development (NVIDIA)
+ujust apptainer-pull-container-nvidia   # Download NVIDIA container
+ujust apptainer-run-container-nvidia    # Interactive shell with GPU
+
+# CPU-Only Development
+ujust apptainer-pull-container          # Download base container
+ujust apptainer-run-container           # Interactive shell (CPU)
 ```
 
 ### WinBoat Integration (Windows App Support)
@@ -422,16 +427,6 @@ On bazzite-ai-nvidia (KDE):
 ujust setup-gpu-containers  # One-time GPU setup for NVIDIA variant
 ```
 
-### Legacy Devcontainer (DEPRECATED)
-
-The old `bazzite-ai-devcontainer` image is still built for backward compatibility but is deprecated. Use `bazzite-ai-container-nvidia` instead. Legacy commands are available with deprecation warnings:
-
-```bash
-just build-devcontainer     # DEPRECATED - use build-container-nvidia
-just run-devcontainer       # DEPRECATED - use run-container-nvidia
-just pull-devcontainer      # DEPRECATED - use pull-container-nvidia
-```
-
 ## Key Modifications from Base Bazzite
 
 Developer-focused changes for **KDE Plasma variants** in `build_files/20-install-apps.sh`:
@@ -487,7 +482,6 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 **Container Variants:**
 - `Containerfile.container` - Base container build (Fedora 42 + dev tools, no NVIDIA/CUDA)
 - `Containerfile.container-nvidia` - NVIDIA container build (adds cuDNN/TensorRT on top of base)
-- `Containerfile.devcontainer` - Legacy devcontainer (DEPRECATED, kept for backward compatibility)
 - `.devcontainer/devcontainer.json` - VS Code configuration for NVIDIA variant
 - `.devcontainer/devcontainer-base.json` - VS Code configuration for base variant (CPU-only)
 - `build_files/devcontainer/install-devcontainer-tools.sh` - Base tool installation
@@ -508,9 +502,8 @@ GitHub Actions workflow (`.github/workflows/build.yml`):
 4. Builds container images in sequence:
    - `build_container`: Base development container (CPU-only, Fedora 42 + dev tools)
    - `build_container_nvidia`: NVIDIA container (builds on base, adds cuDNN/TensorRT)
-   - `build_devcontainer`: Legacy devcontainer (DEPRECATED, for backward compatibility)
 5. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
-6. Pushes to ghcr.io/atrawog/bazzite-ai*, ghcr.io/atrawog/bazzite-ai-container*, ghcr.io/atrawog/bazzite-ai-devcontainer
+6. Pushes to ghcr.io/atrawog/bazzite-ai*, ghcr.io/atrawog/bazzite-ai-container*
 7. Signs all images with cosign (using SIGNING_SECRET)
 
 ## End-User Commands
