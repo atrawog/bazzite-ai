@@ -1,0 +1,26 @@
+ARG BASE_TAG=latest
+ARG BASE_IMAGE=localhost/bazzite-ai-container
+
+FROM ${BASE_IMAGE}:${BASE_TAG}
+
+# Switch back to root for installation
+USER root
+
+# Set environment for NVIDIA variant
+ENV IMAGE_NAME=bazzite-ai-container-nvidia
+
+# CUDA environment (provided by host via nvidia-container-toolkit)
+# These paths will be available when GPU is passed through from host
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+
+# Copy NVIDIA-specific build scripts
+COPY build_files/container-nvidia /build_nvidia
+
+# Install NVIDIA ML libraries (cuDNN, TensorRT)
+RUN /build_nvidia/install-nvidia-tools.sh
+
+# Switch back to devuser
+WORKDIR /workspace
+USER devuser

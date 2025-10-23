@@ -1,8 +1,9 @@
 {
-  "name": "Bazzite AI Devcontainer",
-  // Always uses latest pre-built image from GitHub Container Registry
+  "name": "Bazzite AI Container (NVIDIA)",
+  // Always uses latest pre-built NVIDIA image from GitHub Container Registry
+  // For CPU-only development, use devcontainer-base.json instead
   // Rebuild container (Ctrl+Shift+P -> "Rebuild Container") to get updates
-  "image": "ghcr.io/atrawog/bazzite-ai-devcontainer:latest",
+  "image": "ghcr.io/atrawog/bazzite-ai-container-nvidia:latest",
   "hostRequirements": {
     "gpu": "optional"
   },
@@ -24,5 +25,5 @@
     }
   },
   "remoteUser": "devuser",
-  "postCreateCommand": "nvidia-smi || echo '✓ CPU-only mode: No GPU detected (this is fine for non-NVIDIA systems)'"
+  "postCreateCommand": "nvidia-smi || echo '⚠️  GPU not detected - consider using devcontainer-base.json for CPU-only development'"
 }

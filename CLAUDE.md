@@ -337,61 +337,99 @@ Bazzite AI builds **2 KDE Plasma variants** (GNOME is not supported):
 
 ⚠️ **Note**: Only KDE variants are officially supported. Any GNOME builds in CI are experimental/unofficial.
 
-## Devcontainer Variant
+## Container Variants
 
-**bazzite-ai-devcontainer** - Development container with optional CUDA support
+Bazzite AI provides two development container images for isolated development:
 
-### Purpose
+### bazzite-ai-container (Base)
+
+**CPU-only development container** - Clean base image with no NVIDIA/CUDA dependencies.
+
+**Purpose:**
 - Safe isolated environment for Claude Code with `--dangerously-skip-permissions`
-- Optional CUDA-accelerated AI/ML workflows (on NVIDIA systems)
-- Consistent development environment across GPU and non-GPU systems
+- CPU-only development and testing
+- Lightweight for systems without GPUs
 - No systemd overhead - pure tooling
 
-### Key Features
-- **Unified Configuration**: One config works on both GPU and non-GPU systems
-- **Auto-Detection**: GPU automatically detected and enabled when available
+**Key Features:**
+- **Clean Separation**: No CUDA/NVIDIA references
+- **Smaller Size**: No ML libraries overhead
 - **Pre-built Images**: Always uses latest from GitHub Container Registry
-- **Base**: Fedora 42 with all tools from bazzite-ai-nvidia (KDE)
+- **Base**: Fedora 42 with all development tools
 - **VS Code**: Native Dev Containers support
 
-### Host Requirements
+**Justfile Commands:**
+```bash
+just pull-container [tag]       # Pull from GHCR
+just build-container [tag]      # Build locally
+just run-container [tag]        # Run interactively
+```
 
-**For GPU acceleration** (optional):
+### bazzite-ai-container-nvidia (NVIDIA)
+
+**GPU-accelerated development container** - Builds on base, adds cuDNN and TensorRT.
+
+**Purpose:**
+- CUDA-accelerated AI/ML workflows
+- GPU development and testing
+- Includes optimized ML libraries (cuDNN, TensorRT)
+- Works with host CUDA runtime via nvidia-container-toolkit
+
+**Key Features:**
+- **Built on Base**: Layered architecture for efficient builds
+- **ML Libraries**: cuDNN and TensorRT pre-installed
+- **Host Passthrough**: Uses host CUDA runtime (no toolkit in container)
+- **Pre-built Images**: Always uses latest from GitHub Container Registry
+- **VS Code**: Native Dev Containers support
+
+**Host Requirements:**
 1. Must use **bazzite-ai-nvidia** (KDE variant only)
 2. nvidia-container-toolkit (pre-installed)
 3. CDI config via `ujust setup-gpu-containers`
 
-**For CPU-only**: Works on any bazzite-ai variant.
+See `docs/HOST-SETUP-GPU.md` and `docs/CONTAINER.md`.
 
-See `docs/HOST-SETUP-GPU.md` and `docs/DEVCONTAINER.md`.
-
-### Justfile Commands
-
+**Justfile Commands:**
 ```bash
-just pull-devcontainer [tag]    # Pull from GHCR
-just build-devcontainer [tag]   # Build locally
-just run-devcontainer [tag]     # Run with GPU
-just test-cuda-devcontainer     # Test CUDA
-just run-devcontainer-no-gpu    # CPU only
+just pull-container-nvidia [tag]       # Pull from GHCR
+just build-container-nvidia [tag]      # Build locally (requires base)
+just run-container-nvidia [tag]        # Run with GPU
+just test-cuda-container [tag]         # Test CUDA/GPU
 ```
 
 ### VS Code Usage
 
+**For GPU Development:**
 1. Install Dev Containers extension
 2. Open repo in VS Code
 3. Command Palette → "Reopen in Container"
-4. GPU auto-detected (works on both GPU and non-GPU systems)
+4. Uses `.devcontainer/devcontainer.json` (NVIDIA variant)
 
-The unified configuration pulls the latest image from GHCR automatically. To update, rebuild the container.
+**For CPU-Only Development:**
+1. Open `.devcontainer/devcontainer-base.json` in VS Code
+2. Command Palette → "Dev Containers: Reopen in Container"
+3. Select "devcontainer-base" configuration
 
-See `docs/DEVCONTAINER.md`.
+The configurations pull the latest images from GHCR automatically. To update, rebuild the container.
+
+See `docs/CONTAINER.md`.
 
 ### ujust Commands
 
 On bazzite-ai-nvidia (KDE):
 
 ```bash
-ujust setup-gpu-containers  # One-time GPU setup
+ujust setup-gpu-containers  # One-time GPU setup for NVIDIA variant
+```
+
+### Legacy Devcontainer (DEPRECATED)
+
+The old `bazzite-ai-devcontainer` image is still built for backward compatibility but is deprecated. Use `bazzite-ai-container-nvidia` instead. Legacy commands are available with deprecation warnings:
+
+```bash
+just build-devcontainer     # DEPRECATED - use build-container-nvidia
+just run-devcontainer       # DEPRECATED - use run-container-nvidia
+just pull-devcontainer      # DEPRECATED - use pull-container-nvidia
 ```
 
 ## Key Modifications from Base Bazzite
@@ -446,11 +484,15 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 - `scripts/setup-seeding-service.sh` - Sets up systemd seeding service
 - `scripts/create-release.sh` - Automated release creation script
 
-**Devcontainer:**
-- `Containerfile.devcontainer` - Devcontainer build (Fedora 42 + dev tools)
-- `.devcontainer/devcontainer.json` - Unified VS Code configuration (GPU auto-detection)
-- `build_files/devcontainer/install-devcontainer-tools.sh` - Tool installation
-- `docs/DEVCONTAINER.md` - Usage guide
+**Container Variants:**
+- `Containerfile.container` - Base container build (Fedora 42 + dev tools, no NVIDIA/CUDA)
+- `Containerfile.container-nvidia` - NVIDIA container build (adds cuDNN/TensorRT on top of base)
+- `Containerfile.devcontainer` - Legacy devcontainer (DEPRECATED, kept for backward compatibility)
+- `.devcontainer/devcontainer.json` - VS Code configuration for NVIDIA variant
+- `.devcontainer/devcontainer-base.json` - VS Code configuration for base variant (CPU-only)
+- `build_files/devcontainer/install-devcontainer-tools.sh` - Base tool installation
+- `build_files/container-nvidia/install-nvidia-tools.sh` - NVIDIA ML libraries (cuDNN, TensorRT)
+- `docs/CONTAINER.md` - Container usage guide
 - `docs/HOST-SETUP-GPU.md` - GPU setup (nvidia variant)
 
 **Documentation:**
@@ -462,11 +504,14 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 GitHub Actions workflow (`.github/workflows/build.yml`):
 1. Checks out code and sets up BTRFS storage
 2. Fetches base image version from upstream Bazzite
-3. Builds KDE variants in parallel using buildah (bazzite-ai, bazzite-ai-nvidia)
-4. Builds bazzite-ai-devcontainer (CUDA-enabled development container)
+3. Builds KDE OS variants in parallel using buildah (bazzite-ai, bazzite-ai-nvidia)
+4. Builds container images in sequence:
+   - `build_container`: Base development container (CPU-only, Fedora 42 + dev tools)
+   - `build_container_nvidia`: NVIDIA container (builds on base, adds cuDNN/TensorRT)
+   - `build_devcontainer`: Legacy devcontainer (DEPRECATED, for backward compatibility)
 5. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
-6. Pushes to ghcr.io/atrawog/bazzite-ai* and ghcr.io/atrawog/bazzite-ai-devcontainer
-7. Signs images with cosign (using SIGNING_SECRET)
+6. Pushes to ghcr.io/atrawog/bazzite-ai*, ghcr.io/atrawog/bazzite-ai-container*, ghcr.io/atrawog/bazzite-ai-devcontainer
+7. Signs all images with cosign (using SIGNING_SECRET)
 
 ## End-User Commands
 

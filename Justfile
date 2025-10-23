@@ -218,27 +218,119 @@ run-vm-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_run-
 [group('Run Virtual Machine')]
 run-vm-iso-nvidia $target_image=("localhost/" + image_name + "-nvidia") $tag=default_tag: && (_run-vm target_image tag "iso" "image-builder-iso.config.toml")
 
-# Build devcontainer image locally
-[group('Devcontainer')]
+# =============================================================================
+# Container Commands (base and nvidia variants)
+# =============================================================================
+
+# Build base container image locally
+[group('Container')]
+build-container $tag=default_tag:
+    ${PODMAN} build \
+      -f Containerfile.container \
+      --build-arg FEDORA_VERSION=42 \
+      --tag "bazzite-ai-container:${tag}" \
+      .
+
+# Build NVIDIA container image locally (requires base)
+[group('Container')]
+build-container-nvidia $tag=default_tag: (build-container tag)
+    ${PODMAN} build \
+      -f Containerfile.container-nvidia \
+      --build-arg BASE_TAG={{tag}} \
+      --build-arg BASE_IMAGE=localhost/bazzite-ai-container \
+      --tag "bazzite-ai-container-nvidia:${tag}" \
+      .
+
+# Rebuild both container images (no cache)
+[group('Container')]
+rebuild-container $tag=default_tag:
+    ${PODMAN} build --no-cache \
+      -f Containerfile.container \
+      --build-arg FEDORA_VERSION=42 \
+      --tag "bazzite-ai-container:${tag}" \
+      .
+    ${PODMAN} build --no-cache \
+      -f Containerfile.container-nvidia \
+      --build-arg BASE_TAG={{tag}} \
+      --build-arg BASE_IMAGE=localhost/bazzite-ai-container \
+      --tag "bazzite-ai-container-nvidia:${tag}" \
+      .
+
+# Run base container (CPU-only)
+[group('Container')]
+run-container $tag=default_tag:
+    ${PODMAN} run --rm -it \
+      -v $(pwd):/workspace:Z \
+      -w /workspace \
+      "bazzite-ai-container:${tag}" \
+      /bin/zsh
+
+# Run NVIDIA container with GPU
+[group('Container')]
+run-container-nvidia $tag=default_tag:
+    ${PODMAN} run --rm -it \
+      --device nvidia.com/gpu=all \
+      --security-opt label=disable \
+      -v $(pwd):/workspace:Z \
+      -w /workspace \
+      "bazzite-ai-container-nvidia:${tag}" \
+      /bin/zsh
+
+# Test CUDA in NVIDIA container
+[group('Container')]
+test-cuda-container $tag=default_tag:
+    ${PODMAN} run --rm \
+      --device nvidia.com/gpu=all \
+      --security-opt label=disable \
+      "bazzite-ai-container-nvidia:${tag}" \
+      nvidia-smi
+
+# Pull pre-built base container
+[group('Container')]
+pull-container $tag=default_tag:
+    ${PODMAN} pull "ghcr.io/${repo_organization}/bazzite-ai-container:${tag}"
+
+# Pull pre-built NVIDIA container
+[group('Container')]
+pull-container-nvidia $tag=default_tag:
+    ${PODMAN} pull "ghcr.io/${repo_organization}/bazzite-ai-container-nvidia:${tag}"
+
+# Clean container images
+[group('Container')]
+clean-container:
+    ${PODMAN} rmi bazzite-ai-container || true
+    ${PODMAN} rmi bazzite-ai-container-nvidia || true
+    ${PODMAN} rmi ghcr.io/${repo_organization}/bazzite-ai-container || true
+    ${PODMAN} rmi ghcr.io/${repo_organization}/bazzite-ai-container-nvidia || true
+
+# =============================================================================
+# Devcontainer Commands (DEPRECATED - Use Container commands above)
+# =============================================================================
+
+# Build devcontainer image locally (DEPRECATED - use build-container-nvidia)
+[group('Devcontainer (Legacy)')]
 build-devcontainer $tag=default_tag:
+    @echo "⚠️  DEPRECATED: Use 'just build-container-nvidia' instead"
     ${PODMAN} build \
       -f Containerfile.devcontainer \
       --build-arg FEDORA_VERSION=42 \
       --tag "bazzite-ai-devcontainer:${tag}" \
       .
 
-# Rebuild devcontainer (no cache)
-[group('Devcontainer')]
+# Rebuild devcontainer (no cache) (DEPRECATED)
+[group('Devcontainer (Legacy)')]
 rebuild-devcontainer $tag=default_tag:
+    @echo "⚠️  DEPRECATED: Use 'just rebuild-container' instead"
     ${PODMAN} build --no-cache \
       -f Containerfile.devcontainer \
       --build-arg FEDORA_VERSION=42 \
       --tag "bazzite-ai-devcontainer:${tag}" \
       .
 
-# Run devcontainer with GPU
-[group('Devcontainer')]
+# Run devcontainer with GPU (DEPRECATED - use run-container-nvidia)
+[group('Devcontainer (Legacy)')]
 run-devcontainer $tag=default_tag:
+    @echo "⚠️  DEPRECATED: Use 'just run-container-nvidia' instead"
     ${PODMAN} run --rm -it \
       --device nvidia.com/gpu=all \
       --security-opt label=disable \
@@ -247,32 +339,36 @@ run-devcontainer $tag=default_tag:
       "bazzite-ai-devcontainer:${tag}" \
       /bin/zsh
 
-# Test CUDA in devcontainer
-[group('Devcontainer')]
+# Test CUDA in devcontainer (DEPRECATED)
+[group('Devcontainer (Legacy)')]
 test-cuda-devcontainer $tag=default_tag:
+    @echo "⚠️  DEPRECATED: Use 'just test-cuda-container' instead"
     ${PODMAN} run --rm \
       --device nvidia.com/gpu=all \
       --security-opt label=disable \
       "bazzite-ai-devcontainer:${tag}" \
       nvidia-smi
 
-# Run devcontainer without GPU
-[group('Devcontainer')]
+# Run devcontainer without GPU (DEPRECATED - use run-container)
+[group('Devcontainer (Legacy)')]
 run-devcontainer-no-gpu $tag=default_tag:
+    @echo "⚠️  DEPRECATED: Use 'just run-container' instead"
     ${PODMAN} run --rm -it \
       -v $(pwd):/workspace:Z \
       -w /workspace \
       "bazzite-ai-devcontainer:${tag}" \
       /bin/zsh
 
-# Pull pre-built devcontainer
-[group('Devcontainer')]
+# Pull pre-built devcontainer (DEPRECATED)
+[group('Devcontainer (Legacy)')]
 pull-devcontainer $tag=default_tag:
+    @echo "⚠️  DEPRECATED: Use 'just pull-container-nvidia' instead"
     ${PODMAN} pull "ghcr.io/${repo_organization}/bazzite-ai-devcontainer:${tag}"
 
-# Clean devcontainer images
-[group('Devcontainer')]
+# Clean devcontainer images (DEPRECATED)
+[group('Devcontainer (Legacy)')]
 clean-devcontainer:
+    @echo "⚠️  DEPRECATED: Use 'just clean-container' instead"
     ${PODMAN} rmi bazzite-ai-devcontainer || true
     ${PODMAN} rmi ghcr.io/${repo_organization}/bazzite-ai-devcontainer || true
 

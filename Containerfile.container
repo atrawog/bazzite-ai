@@ -1,0 +1,20 @@
+ARG FEDORA_VERSION=42
+
+FROM fedora:${FEDORA_VERSION} AS base
+
+# Set environment (base variant - no NVIDIA/CUDA)
+ENV IMAGE_NAME=bazzite-ai-container
+ENV IMAGE_VENDOR=atrawog
+
+# Copy build scripts
+COPY build_files/devcontainer /build_files
+
+# Install developer tools
+RUN /build_files/install-devcontainer-tools.sh
+
+# Create non-root user
+RUN useradd -m -s /bin/zsh -G wheel devuser && \
+    echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+WORKDIR /workspace
+USER devuser
