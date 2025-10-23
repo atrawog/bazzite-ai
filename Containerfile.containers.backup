@@ -1,54 +1,19 @@
 # Unified Multi-Stage Containerfile for bazzite-ai development containers
-# Optimized architecture to avoid disk space issues without maximize_space
+# Builds both CPU-only (base) and NVIDIA/CUDA (nvidia) variants from shared base
 # Use --target to select which variant to build:
-#   --target=base-container     → bazzite-ai-container (CPU-only with dev tools)
-#   --target=nvidia-container   → bazzite-ai-container-nvidia (GPU with CUDA only)
+#   --target=base-container     → bazzite-ai-container (CPU-only)
+#   --target=nvidia-container   → bazzite-ai-container-nvidia (GPU)
 
 ARG FEDORA_VERSION=42
 
 ################################################################################
-# Stage 1: Common Minimal Base
-# Minimal foundation shared by both development and NVIDIA paths
-# Contains only Python, basic utilities, and package managers (~500MB)
+# Stage 1: Common Base (shared by both variants)
+# Contains all shared development tools and configuration
+# Maximum layer reuse and caching efficiency
 ################################################################################
-FROM fedora:${FEDORA_VERSION} AS common-minimal
+FROM fedora:${FEDORA_VERSION} AS common-base
 
-# Install minimal base utilities and Python environment
-RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
-    --mount=type=tmpfs,dst=/tmp \
-    dnf5 install -y \
-    # Core utilities
-    curl \
-    git \
-    neovim \
-    vim \
-    wget \
-    zsh \
-    # Python environment
-    python3 \
-    python3-pip \
-    && dnf5 clean all
-
-# Install pixi.sh for package management
-RUN curl -fsSL https://pixi.sh/install.sh | bash -s -- --yes || echo "pixi install skipped"
-
-# Claude Code CLI
-RUN curl -fsSL https://claude.ai/install.sh | bash || echo "Claude Code install skipped"
-
-# Create non-root user (shared by all variants)
-RUN useradd -m -s /bin/zsh -G wheel devuser && \
-    echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-WORKDIR /workspace
-
-################################################################################
-# Stage 2a: Development Additions
-# Adds ALL development tools on top of minimal base (~2GB total)
-# Used by base-container for full-featured CPU-only development
-################################################################################
-FROM common-minimal AS devel-additions
-
-# Install comprehensive development toolchain
+# Use DNF cache mount for faster rebuilds (similar to OS image optimization)
 RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
     --mount=type=tmpfs,dst=/tmp \
     dnf5 install -y \
@@ -59,6 +24,7 @@ RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
     automake \
     bridge-utils \
     ccache cmake \
+    curl \
     debootstrap \
     dislocker \
     dotnet-sdk-9.0 \
@@ -69,21 +35,25 @@ RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
     fuse3-devel \
     gcc gcc-c++ make \
     gh \
-    git-lfs \
+    git git-lfs \
     golang-bazil-fuse-devel \
     golang-bin \
     html2text \
     htop \
     jdupes \
     libtool \
+    neovim \
     nodejs nodejs20 nodejs20-devel nodejs20-full-i18n nodejs20-npm npm \
     php \
     podman podman-compose podman-remote \
-    python3-devel python3-tkinter \
+    python3 python3-devel python3-pip python3-tkinter \
     rpm-sign \
     squashfuse \
     strace \
     sysstat \
+    vim \
+    wget \
+    zsh \
     apptainer apptainer-suid && \
     # Optional tools
     dnf5 install -y \
@@ -123,16 +93,39 @@ RUN mkdir -p /etc/modules-load.d && \
 # Install devcontainers CLI for container automation
 RUN npm install -g @devcontainers/cli || echo "devcontainers CLI install skipped"
 
-# Cleanup to reduce layer size
+# Install pixi.sh for package management
+RUN curl -fsSL https://pixi.sh/install.sh | bash -s -- --yes || echo "pixi install skipped"
+
+# Claude Code CLI
+RUN curl -fsSL https://claude.ai/install.sh | bash || echo "Claude Code install skipped"
+
+# Inline cleanup to reduce layer size (preserve cache mount)
 RUN dnf5 clean all || true
+
+# Create non-root user (shared by both variants)
+RUN useradd -m -s /bin/zsh -G wheel devuser && \
+    echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+WORKDIR /workspace
+
+################################################################################
+# Stage 2a: Base Container (CPU-only variant)
+# Final stage for bazzite-ai-container
+################################################################################
+FROM common-base AS base-container
+
+# Set environment for base variant (no NVIDIA/CUDA references)
+ENV IMAGE_NAME=bazzite-ai-container
+ENV IMAGE_VENDOR=atrawog
+
+USER devuser
 
 ################################################################################
 # Stage 2b: NVIDIA Additions
-# Adds ONLY CUDA/ML libraries on top of minimal base (~1.5GB total)
-# NO development tools - focused on GPU compute only
-# This eliminates disk space issues by keeping NVIDIA variant small
+# Adds cuDNN, TensorRT, and CUDA environment on top of common base
+# This stage can be cached independently from base-container
 ################################################################################
-FROM common-minimal AS nvidia-additions
+FROM common-base AS nvidia-additions
 
 # CUDA environment (provided by host via nvidia-container-toolkit)
 # These paths will be available when GPU is passed through from host
@@ -177,23 +170,8 @@ RUN python3 -c "import tensorrt; print(f'TensorRT version: {tensorrt.__version__
         echo "::warning::cuDNN verification failed (may still work via host CUDA)"
 
 ################################################################################
-# Stage 3a: Base Container (CPU-only variant with dev tools)
-# Final stage for bazzite-ai-container
-# Full development environment without GPU dependencies
-################################################################################
-FROM devel-additions AS base-container
-
-# Set environment for base variant (no NVIDIA/CUDA references)
-ENV IMAGE_NAME=bazzite-ai-container
-ENV IMAGE_VENDOR=atrawog
-
-USER devuser
-
-################################################################################
-# Stage 3b: NVIDIA Container (GPU variant with CUDA only)
+# Stage 3: NVIDIA Container (GPU variant)
 # Final stage for bazzite-ai-container-nvidia
-# Lightweight GPU compute environment (~1.5GB vs previous 3.5GB)
-# NO development tools - use base-container for development, this for GPU compute
 ################################################################################
 FROM nvidia-additions AS nvidia-container
 

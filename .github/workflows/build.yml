@@ -281,6 +281,7 @@ jobs:
             image: bazzite-ai-container-nvidia
             target: nvidia-container
             description: NVIDIA/CUDA container with cuDNN and TensorRT for bazzite-ai
+            # NVIDIA variant optimized: ~1.5GB (CUDA libraries only, no dev tools)
 
     permissions:
       contents: read
