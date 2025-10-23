@@ -191,9 +191,9 @@ WINBOAT_VERSION="0.8.7"
 WINBOAT_RPM="winboat-${WINBOAT_VERSION}-x86_64.rpm"
 WINBOAT_URL="https://github.com/TibixDev/winboat/releases/download/v${WINBOAT_VERSION}/${WINBOAT_RPM}"
 
-# Create /opt/winboat directory for rpm-ostree compatibility
-# /opt is a symlink to /var/opt in rpm-ostree, so use -p with || true
-mkdir -p /opt/winboat || true
+# Create /var/opt/winboat directory for rpm-ostree compatibility
+# /opt is a symlink to /var/opt in rpm-ostree
+mkdir -p /var/opt/winboat
 
 curl -L -o "/tmp/${WINBOAT_RPM}" "${WINBOAT_URL}" || {
     echo "::warning::Failed to download WinBoat, continuing..."
