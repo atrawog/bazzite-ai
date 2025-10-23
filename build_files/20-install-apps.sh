@@ -202,6 +202,8 @@ curl -L -o "/tmp/${WINBOAT_RPM}" "${WINBOAT_URL}" || {
 }
 
 if [[ -f "/tmp/${WINBOAT_RPM}" ]]; then
+    # Note: WinBoat does not provide GPG-signed RPMs
+    # Warning "skipped OpenPGP checks for 1 package from repository: @commandline" is expected
     dnf5 install -y "/tmp/${WINBOAT_RPM}" || {
         echo "::warning::WinBoat installation failed, continuing..."
     }
