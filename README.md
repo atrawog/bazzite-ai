@@ -8,11 +8,14 @@ This is a custom fork of [Bazzite DX](https://github.com/ublue-os/bazzite-dx) wi
 
 ## Variants
 
-Bazzite AI provides **2 OS images** and **2 container images**:
+Bazzite AI provides **1 unified OS image** and **2 container images**:
 
-### OS Images (KDE Plasma)
-- **bazzite-ai** - For AMD/Intel GPUs
-- **bazzite-ai-nvidia** - For NVIDIA GPUs with container GPU support
+### OS Image (KDE Plasma)
+- **bazzite-ai** - Unified image for all hardware (AMD/Intel/NVIDIA)
+  - Based on bazzite-nvidia-open (open NVIDIA drivers work on all GPUs)
+  - NVIDIA Container Toolkit pre-installed
+  - Full GPU acceleration support for containers
+  - Seamless experience regardless of hardware
 
 ### Container Images
 - **bazzite-ai-container** - Base CPU-only development container
@@ -33,8 +36,7 @@ See [Container Guide](#development-container) below for details.
 
 Download the latest ISO from [Releases](https://github.com/atrawog/bazzite-ai/releases/latest):
 
-- **bazzite-ai-*.iso** - For AMD/Intel GPUs
-- **bazzite-ai-nvidia-*.iso** - For NVIDIA GPUs
+- **bazzite-ai-*.iso** - Unified ISO for all hardware (AMD/Intel/NVIDIA)
 
 Create a bootable USB drive using your preferred tool:
 - [Fedora Media Writer](https://fedoraproject.org/workstation/download) (Recommended)
@@ -47,14 +49,8 @@ Boot from the USB drive and follow the installation prompts.
 
 To rebase an existing Bazzite installation to Bazzite AI:
 
-**For AMD/Intel GPUs (KDE Plasma):**
 ```bash
 rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai:stable
-```
-
-**For NVIDIA GPUs (KDE Plasma):**
-```bash
-rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai-nvidia:stable
 ```
 
 After running the rebase command, reboot your system to complete the installation.
@@ -166,15 +162,15 @@ ujust apptainer-run-container latest /path/to/project
 ### Requirements
 
 **For GPU acceleration (Apptainer)**:
-- Must use **bazzite-ai-nvidia** (KDE variant) as host
-- NVIDIA drivers installed (pre-configured in bazzite-ai-nvidia)
+- NVIDIA GPU with drivers (pre-configured in bazzite-ai)
 - No additional setup needed - Apptainer handles GPU automatically
 
 **For GPU acceleration (Podman/Docker)**:
-- Must use **bazzite-ai-nvidia** (KDE variant)
+- NVIDIA GPU with drivers (pre-configured in bazzite-ai)
 - Run `ujust setup-gpu-containers` once for CDI config
+- nvidia-container-toolkit is pre-installed
 
-**For CPU-only**: Works on any bazzite-ai variant.
+**For CPU-only**: Works on all hardware (AMD/Intel/NVIDIA).
 
 See [CONTAINER.md](docs/CONTAINER.md) for comprehensive guide.
 

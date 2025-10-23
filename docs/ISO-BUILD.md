@@ -25,7 +25,7 @@ ls -l /dev/kvm
 
 ## Building ISOs
 
-### Build Base Variant (AMD/Intel GPU)
+### Build Unified ISO (All Hardware)
 ```bash
 # Build from local container image
 just build-iso
@@ -36,55 +36,28 @@ just rebuild-iso
 
 Output: `output/bootiso/install.iso`
 
-### Build NVIDIA Variant
-```bash
-# Build from local container image
-just build-iso-nvidia
-
-# Or rebuild container first, then build ISO
-just rebuild-iso-nvidia
-```
-
-Output: `output/bootiso/install.iso` (overwrite warning: move previous ISO first!)
-
-### Build Both Variants
-```bash
-# Build both ISOs sequentially
-just build-iso-all
-
-# Or rebuild containers first
-just rebuild-iso-all
-```
-
-**Important:** The second ISO will overwrite the first at `output/bootiso/install.iso`.
-Move/rename the first ISO before building the second.
+The unified ISO works on all hardware (AMD/Intel/NVIDIA) using the bazzite-nvidia-open base.
 
 ## Workflow for Release
 
-### 1. Build Container Images
+### 1. Build Container Image
 ```bash
-# These are built automatically by GitHub Actions
+# Built automatically by GitHub Actions
 # Or build locally:
 just build bazzite-ai latest
-just build bazzite-ai-nvidia latest
 ```
 
-### 2. Build ISOs from Container Images
+### 2. Build ISO from Container Image
 ```bash
-# Pull published images from GHCR
+# Pull published image from GHCR
 podman pull ghcr.io/atrawog/bazzite-ai:latest
-podman pull ghcr.io/atrawog/bazzite-ai-nvidia:latest
 
 # Tag for local use
 podman tag ghcr.io/atrawog/bazzite-ai:latest localhost/bazzite-ai:latest
-podman tag ghcr.io/atrawog/bazzite-ai-nvidia:latest localhost/bazzite-ai-nvidia:latest
 
-# Build ISOs
+# Build ISO
 just build-iso localhost/bazzite-ai latest
 mv output/bootiso/install.iso bazzite-ai-$(date +%Y%m%d).iso
-
-just build-iso-nvidia localhost/bazzite-ai-nvidia latest
-mv output/bootiso/install.iso bazzite-ai-nvidia-$(date +%Y%m%d).iso
 ```
 
 ### 3. Generate Checksums
@@ -96,13 +69,10 @@ sha256sum bazzite-ai-*.iso > SHA256SUMS
 sha256sum -c SHA256SUMS
 ```
 
-### 4. Test ISOs (Optional)
+### 4. Test ISO (Optional)
 ```bash
-# Test base variant in VM
+# Test ISO in VM
 just run-vm-iso
-
-# Test NVIDIA variant in VM
-just run-vm-iso-nvidia
 ```
 
 Opens browser-based VM interface on http://localhost:8006+
@@ -117,17 +87,17 @@ gh release create "$TAG" \
   --title "Bazzite AI $TAG" \
   --notes "Bazzite AI release $TAG
 
-## Container Images
+## Container Image
 - \`ghcr.io/atrawog/bazzite-ai:$TAG\`
-- \`ghcr.io/atrawog/bazzite-ai-nvidia:$TAG\`
 
-## ISO Downloads
+Unified image based on bazzite-nvidia-open (works on all hardware: AMD/Intel/NVIDIA).
+
+## ISO Download
 See assets below.
 
 ## Installation
-Download the appropriate ISO for your hardware:
-- **bazzite-ai-*.iso** - For AMD/Intel GPUs
-- **bazzite-ai-nvidia-*.iso** - For NVIDIA GPUs
+Download the unified ISO (works on all hardware):
+- **bazzite-ai-*.iso** - KDE Plasma (AMD/Intel/NVIDIA)
 
 Create a bootable USB drive and follow the installation prompts.
 
@@ -138,24 +108,21 @@ rpm-ostree rebase ostree-unverified-registry:ghcr.io/atrawog/bazzite-ai:$TAG
 \`\`\`
 " \
   bazzite-ai-*.iso \
-  bazzite-ai-nvidia-*.iso \
   SHA256SUMS
 ```
 
 ## Understanding the Build Process
 
 ### What bootc-image-builder Does
-1. Pulls the container image specified in `iso.toml` or `iso-nvidia.toml`
+1. Pulls the container image specified in `iso.toml`
 2. Extracts the OSTree commit from the container
 3. Creates an Anaconda installer ISO
 4. Configures kickstart to switch to the registry image on first boot
 5. Outputs to `output/bootiso/install.iso`
 
 ### Configuration Files
-- **iso.toml** - Config for base bazzite-ai ISO
+- **iso.toml** - Config for unified bazzite-ai ISO
   - Points to `ghcr.io/atrawog/bazzite-ai:latest`
-- **iso-nvidia.toml** - Config for NVIDIA variant ISO
-  - Points to `ghcr.io/atrawog/bazzite-ai-nvidia:latest`
 - **image.toml** - Config for raw/qcow2 disk images (not ISOs)
 
 ### Build Artifacts

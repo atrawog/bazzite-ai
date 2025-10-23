@@ -111,7 +111,7 @@ toggle-gamemode ACTION="":
 
     echo -e "${green}${bold}Success:${normal} Default session set to $target_pretty. Reboot or log out to apply."
 
-# Setup GPU access for containers (NVIDIA variant only)
+# Setup GPU access for containers (pre-installed on all bazzite-ai)
 setup-gpu-containers:
     #!/usr/bin/bash
     set -euo pipefail
@@ -120,8 +120,8 @@ setup-gpu-containers:
     # Check if nvidia-container-toolkit is installed
     if ! command -v nvidia-ctk &> /dev/null; then
         echo -e "${red}${bold}Error:${normal} nvidia-container-toolkit not found."
-        echo "This command requires bazzite-ai-nvidia (KDE variant)."
-        echo "bazzite-ai only supports KDE Plasma variants."
+        echo "nvidia-container-toolkit should be pre-installed on bazzite-ai."
+        echo "Please file a bug report if you're seeing this message."
         exit 1
     fi
 

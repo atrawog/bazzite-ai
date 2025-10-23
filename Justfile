@@ -215,9 +215,6 @@ run-vm-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_run-
 [group('Run Virtual Machine')]
 run-vm-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_run-vm target_image tag "iso" "image-builder-iso.config.toml")
 
-[group('Run Virtual Machine')]
-run-vm-iso-nvidia $target_image=("localhost/" + image_name + "-nvidia") $tag=default_tag: && (_run-vm target_image tag "iso" "image-builder-iso.config.toml")
-
 # =============================================================================
 # Container Commands (base and nvidia variants)
 # =============================================================================
@@ -308,25 +305,23 @@ clean-container:
 _release-tag:
     @echo "42.$(date +%Y%m%d)"
 
-# Private helper: Check if ISOs exist and confirm rebuild
+# Private helper: Check if ISO exists and confirm rebuild
 [private]
 _release-check-isos tag:
     #!/usr/bin/env bash
     set -euo pipefail
     tag="{{ tag }}"
 
-    iso_base="${image_name}-${tag}.iso"
-    iso_nvidia="${image_name}-nvidia-${tag}.iso"
+    iso_file="${image_name}-${tag}.iso"
 
-    if [[ -f "$iso_base" || -f "$iso_nvidia" ]]; then
-      echo "Found existing ISO(s):"
-      [[ -f "$iso_base" ]] && ls -lh "$iso_base"
-      [[ -f "$iso_nvidia" ]] && ls -lh "$iso_nvidia"
+    if [[ -f "$iso_file" ]]; then
+      echo "Found existing ISO:"
+      ls -lh "$iso_file"
       echo
-      read -p "Rebuild ISOs? [y/N] " -n 1 -r
+      read -p "Rebuild ISO? [y/N] " -n 1 -r
       echo
       if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Using existing ISOs"
+        echo "Using existing ISO"
         exit 1
       fi
     fi
@@ -338,29 +333,27 @@ _release-notes tag:
     set -euo pipefail
     tag="{{ tag }}"
 
-    iso_base="${image_name}-${tag}.iso"
-    iso_nvidia="${image_name}-nvidia-${tag}.iso"
+    iso_file="${image_name}-${tag}.iso"
 
-    # Get container image digests
-    base_digest=$(podman inspect localhost/${image_name}:latest 2>/dev/null | jq -r '.[0].Digest' || echo "unknown")
-    nvidia_digest=$(podman inspect localhost/${image_name}-nvidia:latest 2>/dev/null | jq -r '.[0].Digest' || echo "unknown")
+    # Get container image digest
+    image_digest=$(podman inspect localhost/${image_name}:latest 2>/dev/null | jq -r '.[0].Digest' || echo "unknown")
 
     cat <<EOF
     # Bazzite AI ${tag}
 
-    ## Container Images
+    ## Container Image
 
-    - \`ghcr.io/${repo_organization}/${image_name}:${tag}\` (Digest: ${base_digest})
-    - \`ghcr.io/${repo_organization}/${image_name}-nvidia:${tag}\` (Digest: ${nvidia_digest})
+    - \`ghcr.io/${repo_organization}/${image_name}:${tag}\` (Digest: ${image_digest})
+
+    Unified image with NVIDIA open driver support (works on all hardware: AMD, Intel, NVIDIA).
 
     All images are signed with cosign and can be verified using the public key in this repository.
 
-    ## ISO Downloads
+    ## ISO Download
 
-    Download the appropriate ISO for your hardware:
+    Download the unified ISO (works on all hardware):
 
-    - **${iso_base}** - For AMD/Intel GPUs (KDE Plasma)
-    - **${iso_nvidia}** - For NVIDIA GPUs (KDE Plasma)
+    - **${iso_file}** - KDE Plasma (AMD/Intel/NVIDIA GPUs)
 
     **Important:** Always verify your download using the provided SHA256 checksums:
     \`\`\`bash
@@ -370,7 +363,7 @@ _release-notes tag:
     ## Installation
 
     ### Fresh Install
-    1. Download the appropriate ISO
+    1. Download the ISO
     2. Create a bootable USB using [Fedora Media Writer](https://fedoraproject.org/workstation/download)
     3. Boot from USB and follow installation prompts
 
@@ -378,14 +371,8 @@ _release-notes tag:
 
     Rebase to this version:
 
-    **AMD/Intel GPUs:**
     \`\`\`bash
     rpm-ostree rebase ostree-image-signed:docker://ghcr.io/${repo_organization}/${image_name}:${tag}
-    \`\`\`
-
-    **NVIDIA GPUs:**
-    \`\`\`bash
-    rpm-ostree rebase ostree-image-signed:docker://ghcr.io/${repo_organization}/${image_name}-nvidia:${tag}
     \`\`\`
 
     Then reboot to complete the update.
@@ -400,77 +387,56 @@ _release-notes tag:
     Built with Claude Code: https://claude.com/claude-code
     EOF
 
-# Pull container images from GHCR and tag for local use
+# Pull container image from GHCR and tag for local use
 [group('Release')]
 release-pull tag=`just _release-tag`:
     #!/usr/bin/env bash
     set -euo pipefail
     tag="{{ tag }}"
 
-    echo "Pulling container images for tag: ${tag}"
+    echo "Pulling container image for tag: ${tag}"
     echo
 
-    # Pull base image
+    # Pull unified image
     echo "Pulling ghcr.io/${repo_organization}/${image_name}:${tag}..."
     podman pull "ghcr.io/${repo_organization}/${image_name}:${tag}" || \
       podman pull "ghcr.io/${repo_organization}/${image_name}:latest"
 
-    # Pull NVIDIA image
-    echo "Pulling ghcr.io/${repo_organization}/${image_name}-nvidia:${tag}..."
-    podman pull "ghcr.io/${repo_organization}/${image_name}-nvidia:${tag}" || \
-      podman pull "ghcr.io/${repo_organization}/${image_name}-nvidia:latest"
-
     # Tag for local use
     echo
-    echo "Tagging images for local use..."
+    echo "Tagging image for local use..."
     podman tag "ghcr.io/${repo_organization}/${image_name}:latest" "localhost/${image_name}:latest"
-    podman tag "ghcr.io/${repo_organization}/${image_name}-nvidia:latest" "localhost/${image_name}-nvidia:latest"
 
     echo
-    echo "✓ Images ready for ISO building"
+    echo "✓ Image ready for ISO building"
 
-# Build both ISO variants with confirmation if they exist
+# Build unified ISO with confirmation if it exists
 [group('Release')]
 release-build-isos tag=`just _release-tag`: (_release-check-isos tag)
     #!/usr/bin/env bash
     set -euo pipefail
     tag="{{ tag }}"
 
-    iso_base="${image_name}-${tag}.iso"
-    iso_nvidia="${image_name}-nvidia-${tag}.iso"
+    iso_file="${image_name}-${tag}.iso"
 
-    echo "Building ISOs for release: ${tag}"
-    echo "This will take approximately 60-120 minutes total"
+    echo "Building ISO for release: ${tag}"
+    echo "This will take approximately 30-60 minutes"
     echo
 
-    # Build base ISO
-    echo "Building base ISO..."
+    # Build unified ISO
+    echo "Building ISO..."
     just build-iso "localhost/${image_name}" latest
 
     if [[ -f "output/bootiso/install.iso" ]]; then
-      mv output/bootiso/install.iso "$iso_base"
-      echo "✓ Base ISO created: $iso_base ($(du -h "$iso_base" | cut -f1))"
+      mv output/bootiso/install.iso "$iso_file"
+      echo "✓ ISO created: $iso_file ($(du -h "$iso_file" | cut -f1))"
     else
-      echo "✗ Base ISO build failed"
+      echo "✗ ISO build failed"
       exit 1
     fi
 
     echo
-
-    # Build NVIDIA ISO
-    echo "Building NVIDIA ISO..."
-    just build-iso-nvidia "localhost/${image_name}-nvidia" latest
-
-    if [[ -f "output/bootiso/install.iso" ]]; then
-      mv output/bootiso/install.iso "$iso_nvidia"
-      echo "✓ NVIDIA ISO created: $iso_nvidia ($(du -h "$iso_nvidia" | cut -f1))"
-    else
-      echo "✗ NVIDIA ISO build failed"
-      exit 1
-    fi
-
-    echo
-    echo "✓ Both ISOs built successfully"
+    echo "✓ ISO built successfully"
 
 # Generate and verify SHA256 checksums for ISOs
 [group('Release')]

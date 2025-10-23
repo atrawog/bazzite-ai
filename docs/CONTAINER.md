@@ -62,7 +62,7 @@ Both containers include all development tools from bazzite-ai without the OS ove
 **Image:** `ghcr.io/atrawog/bazzite-ai-container-nvidia`
 
 **Host Requirements:**
-1. Must use **bazzite-ai-nvidia** (KDE variant only)
+1. Must use **bazzite-ai** (KDE only)
 2. nvidia-container-toolkit (pre-installed)
 3. CDI config via `ujust setup-gpu-containers`
 
@@ -153,7 +153,7 @@ code .
 This uses `.devcontainer/devcontainer.json` which configures the NVIDIA variant with GPU support.
 
 **GPU is automatically detected!** The devcontainer configuration:
-- Works on both bazzite-ai-nvidia (with GPU) and bazzite-ai (without GPU)
+- Works on bazzite-ai (with or without NVIDIA GPU)
 - Auto-detects GPU availability and gracefully falls back to CPU-only mode
 - Uses the latest pre-built image from GitHub Container Registry
 
@@ -206,17 +206,17 @@ just run-container
 
 ### For GPU Acceleration (NVIDIA)
 
-**You must be running bazzite-ai-nvidia (KDE variant).**
+**You must be running bazzite-ai (KDE only).**
 
-⚠️ **Important**: bazzite-ai only supports KDE Plasma variants, not GNOME.
+⚠️ **Important**: bazzite-ai only supports KDE Plasma, not GNOME.
 
-1. **Verify you're on bazzite-ai-nvidia**:
+1. **Verify you're on bazzite-ai**:
    ```bash
    cat /usr/share/ublue-os/image-info.json | jq -r '.\"image-name\"'
-   # Should output: bazzite-ai-nvidia
+   # Should output: bazzite-ai
    ```
 
-2. **nvidia-container-toolkit is pre-installed** on bazzite-ai-nvidia
+2. **nvidia-container-toolkit is pre-installed** on bazzite-ai
 
 3. **Generate CDI configuration** (one-time setup):
    ```bash
@@ -300,7 +300,7 @@ just clean-container-nvidia
 
 2. **Configure GPU Access** (if using NVIDIA):
    ```bash
-   # On host system (bazzite-ai-nvidia)
+   # On host system (bazzite-ai)
    ujust setup-gpu-containers
    ```
 
@@ -443,7 +443,7 @@ Edit `.devcontainer/devcontainer.json` (NVIDIA) or `.devcontainer/devcontainer-b
 **Symptom**: `nvidia-smi` returns error
 
 **Solutions**:
-1. Verify you're on bazzite-ai-nvidia (KDE):
+1. Verify you're on bazzite-ai (KDE):
    ```bash
    cat /usr/share/ublue-os/image-info.json | jq -r '.\"image-name\"'
    ```
@@ -603,7 +603,7 @@ Access at `http://localhost:8888`
 ### Remote Development
 
 ```bash
-# On remote bazzite-ai-nvidia machine
+# On remote bazzite-ai machine
 just run-container-nvidia  # For GPU
 # OR
 just run-container         # For CPU-only
@@ -651,7 +651,7 @@ For enhanced security:
 ## Related Documentation
 
 - [HOST-SETUP-GPU.md](HOST-SETUP-GPU.md) - GPU setup on host system
-- [ISO-BUILD.md](ISO-BUILD.md) - Building bazzite-ai-nvidia
+- [ISO-BUILD.md](ISO-BUILD.md) - Building bazzite-ai ISO
 - [CLAUDE.md](../CLAUDE.md) - Full repository documentation
 
 ## Getting Help

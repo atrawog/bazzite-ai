@@ -25,7 +25,7 @@ Before starting a release, ensure:
   ```bash
   # Check images exist
   podman pull ghcr.io/atrawog/bazzite-ai:latest
-  podman pull ghcr.io/atrawog/bazzite-ai-nvidia:latest
+  podman pull ghcr.io/atrawog/bazzite-ai:latest
   ```
 - [ ] All prerequisites are met
   ```bash
@@ -89,7 +89,7 @@ just release-pull [tag]
 
 This pulls the latest container images from GHCR:
 - `ghcr.io/atrawog/bazzite-ai:latest`
-- `ghcr.io/atrawog/bazzite-ai-nvidia:latest`
+- `ghcr.io/atrawog/bazzite-ai:latest`
 
 **What it does:**
 - Pulls images from GitHub Container Registry
@@ -104,14 +104,14 @@ This pulls the latest container images from GHCR:
 just release-build-isos [tag]
 ```
 
-This builds both ISO variants using bootc-image-builder:
+This builds the unified ISO using bootc-image-builder:
 - `bazzite-ai-{tag}.iso` - Base ISO for AMD/Intel GPUs (~8.2GB)
-- `bazzite-ai-nvidia-{tag}.iso` - NVIDIA ISO (~8.3GB)
+- `bazzite-ai-{tag}.iso` - NVIDIA ISO (~8.3GB)
 
 **What it does:**
 - Checks if ISOs already exist (prompts to rebuild if found)
 - Builds base ISO from `localhost/bazzite-ai:latest` (30-60 min)
-- Builds NVIDIA ISO from `localhost/bazzite-ai-nvidia:latest` (30-60 min)
+- Builds NVIDIA ISO from `localhost/bazzite-ai:latest` (30-60 min)
 - Moves built ISOs from `output/bootiso/` to root directory
 
 **Time:** 60-120 minutes total (30-60 minutes per ISO)
@@ -127,7 +127,7 @@ just release-checksums
 This creates SHA256 checksums for verification:
 
 **What it does:**
-- Generates `SHA256SUMS` file with checksums for both ISOs
+- Generates `SHA256SUMS` file with checksums for the ISO
 - Verifies checksums immediately
 - Displays checksums for review
 
@@ -135,7 +135,7 @@ This creates SHA256 checksums for verification:
 ```
 SHA256SUMS:
 <hash>  bazzite-ai-42.20251023.iso
-<hash>  bazzite-ai-nvidia-42.20251023.iso
+<hash>  bazzite-ai-42.20251023.iso
 ```
 
 **Time:** < 1 minute
@@ -158,7 +158,7 @@ This organizes files into the release directory structure:
 releases/
 ├── 42.20251023/
 │   ├── bazzite-ai-42.20251023.iso
-│   ├── bazzite-ai-nvidia-42.20251023.iso
+│   ├── bazzite-ai-42.20251023.iso
 │   ├── SHA256SUMS
 │   └── (torrents will be added here)
 └── latest -> 42.20251023
@@ -175,7 +175,7 @@ just release-create-torrents [tag]
 This creates .torrent files for BitTorrent distribution:
 
 **What it does:**
-- Creates `.torrent` files for both ISOs
+- Creates `.torrent` files for the ISO
 - Uses 6 public trackers for open source distribution
 - Generates magnet links in `{tag}-magnets.txt`
 - Saves everything to `releases/{tag}/`
@@ -248,14 +248,14 @@ This creates the GitHub release with download instructions:
 - Uploads `SHA256SUMS` file
 - Generates release notes with:
   - File sizes (dynamically calculated)
-  - Magnet links for both ISOs
+  - Magnet links for the ISO
   - BitTorrent download instructions
   - Rebase instructions for existing users
   - Verification instructions
 
 **Release Assets:**
 - `bazzite-ai-{tag}.iso.torrent` (~50KB)
-- `bazzite-ai-nvidia-{tag}.iso.torrent` (~50KB)
+- `bazzite-ai-{tag}.iso.torrent` (~50KB)
 - `SHA256SUMS` (text file)
 
 **Note:** ISO files themselves are NOT uploaded to GitHub (they exceed the 2GB limit). Users download them via BitTorrent.
@@ -402,7 +402,7 @@ podman images | grep bazzite-ai
 
 # Try building ISOs one at a time
 just build-iso localhost/bazzite-ai latest
-just build-iso-nvidia localhost/bazzite-ai-nvidia latest
+just build-iso-nvidia localhost/bazzite-ai latest
 ```
 
 ### Torrent Creation Failures
@@ -600,7 +600,7 @@ A: Delete the release on GitHub with `gh release delete [tag]`, then remove the 
 | `just release-status [tag]` | Show current status | <1 min |
 | `just release` | Full release workflow | 90-150 min |
 | `just release-pull [tag]` | Pull container images | 5-10 min |
-| `just release-build-isos [tag]` | Build both ISOs | 60-120 min |
+| `just release-build-isos [tag]` | Build the ISO | 30-60 min |
 | `just release-checksums` | Generate checksums | <1 min |
 | `just release-organize [tag]` | Organize files | <1 min |
 | `just release-create-torrents [tag]` | Create torrents | 2 min |

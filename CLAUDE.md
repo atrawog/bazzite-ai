@@ -9,7 +9,7 @@ This is Bazzite AI - a custom fork of [Bazzite](https://github.com/ublue-os/bazz
 **⚠️ Important**: Bazzite AI **only supports KDE Plasma variants**. GNOME variants are not officially supported.
 
 Key technologies:
-- **Base**: ublue-os/bazzite (KDE Plasma) with open NVIDIA drivers
+- **Base**: ublue-os/bazzite-nvidia-open (KDE Plasma) with open NVIDIA drivers (works on all GPUs)
 - **Desktop**: KDE Plasma only
 - **Build System**: Containerfile-based OSTree image builds
 - **Task Runner**: Just (justfile)
@@ -23,13 +23,14 @@ Key technologies:
 
 This is NOT a traditional application repository. It builds bootable container images using:
 
-1. **Base Images**: Starts from `ghcr.io/ublue-os/bazzite*:stable` and `ghcr.io/ublue-os/bazzite-nvidia-open:stable` variants
-2. **Build Process**: Multi-stage Containerfile that:
+1. **Base Image**: Starts from `ghcr.io/ublue-os/bazzite-nvidia-open:stable` (unified base)
+2. **Build Process**: Containerfile that:
    - Copies `system_files/` (runtime config) and `build_files/` (build scripts) into image
    - Runs `build_files/build.sh` which orchestrates numbered build scripts
    - Installs developer tools (VS Code, Docker, Android tools, BPF tools, etc.)
+   - Always installs nvidia-container-toolkit for GPU container support
    - Configures system settings and services
-3. **Output**: Signed container images pushed to GitHub Container Registry
+3. **Output**: Signed container image pushed to GitHub Container Registry
 
 ### Build Script Execution Order
 
@@ -335,12 +336,14 @@ Users can download via:
 
 ## Image Variants
 
-Bazzite AI builds **2 KDE Plasma variants** (GNOME is not supported):
+Bazzite AI builds **1 unified KDE Plasma variant** (GNOME is not supported):
 
-- **bazzite-ai** - KDE Plasma (from `bazzite`)
-- **bazzite-ai-nvidia** - KDE Plasma with NVIDIA open drivers (from `bazzite-nvidia-open`)
+- **bazzite-ai** - KDE Plasma unified image (from `bazzite-nvidia-open`)
+  - Based on bazzite-nvidia-open with open NVIDIA drivers (works on all GPUs: AMD/Intel/NVIDIA)
+  - nvidia-container-toolkit pre-installed for GPU container support
+  - Single image for simplified maintenance and user experience
 
-⚠️ **Note**: Only KDE variants are officially supported. Any GNOME builds in CI are experimental/unofficial.
+⚠️ **Note**: Only KDE variant is officially supported. Any GNOME builds in CI are experimental/unofficial.
 
 ## Container Variants
 
@@ -388,7 +391,7 @@ just run-container [tag]        # Run interactively
 - **VS Code**: Native Dev Containers support
 
 **Host Requirements:**
-1. Must use **bazzite-ai-nvidia** (KDE variant only)
+1. Must use **bazzite-ai** (KDE only)
 2. nvidia-container-toolkit (pre-installed)
 3. CDI config via `ujust setup-gpu-containers`
 
@@ -421,10 +424,10 @@ See `docs/CONTAINER.md`.
 
 ### ujust Commands
 
-On bazzite-ai-nvidia (KDE):
+On bazzite-ai (KDE):
 
 ```bash
-ujust setup-gpu-containers  # One-time GPU setup for NVIDIA variant
+ujust setup-gpu-containers  # One-time GPU setup (nvidia-container-toolkit pre-installed)
 ```
 
 ## Key Modifications from Base Bazzite
@@ -442,7 +445,7 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
    - Docker CE + docker-compose
    - BPF tools (bpftrace, bpftop, bcc)
    - Container tools (podman-machine, podman-tui)
-   - **nvidia-container-toolkit** (nvidia variant only)
+   - **nvidia-container-toolkit** (always installed for GPU container support)
    - Android tools (android-tools, usbmuxd)
    - Cloud tools (restic, rclone)
    - Development utilities (ccache, flatpak-builder, qemu-kvm)
@@ -470,8 +473,7 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 
 **ISO/VM Images:**
 - `image.toml` - Minimal config for VM/raw images (20GB root partition)
-- `iso.toml` - Base ISO installer config with kickstart to switch to registry image
-- `iso-nvidia.toml` - NVIDIA ISO installer config
+- `iso.toml` - Unified ISO installer config with kickstart to switch to registry image
 
 **Release Infrastructure:**
 - `releases/` - Directory structure for organized release artifacts (git-ignored)
@@ -498,12 +500,12 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 GitHub Actions workflow (`.github/workflows/build.yml`):
 1. Checks out code and sets up BTRFS storage
 2. Fetches base image version from upstream Bazzite
-3. Builds KDE OS variants in parallel using buildah (bazzite-ai, bazzite-ai-nvidia)
+3. Builds unified KDE OS image using buildah (bazzite-ai from bazzite-nvidia-open base)
 4. Builds container images in sequence:
    - `build_container`: Base development container (CPU-only, Fedora 42 + dev tools)
    - `build_container_nvidia`: NVIDIA container (builds on base, adds cuDNN/TensorRT)
 5. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
-6. Pushes to ghcr.io/atrawog/bazzite-ai*, ghcr.io/atrawog/bazzite-ai-container*
+6. Pushes to ghcr.io/atrawog/bazzite-ai, ghcr.io/atrawog/bazzite-ai-container*
 7. Signs all images with cosign (using SIGNING_SECRET)
 
 ## End-User Commands

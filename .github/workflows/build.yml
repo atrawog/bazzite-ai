@@ -29,15 +29,8 @@ jobs:
     name: Build and push image
     runs-on: ubuntu-24.04
 
-    strategy:
-      fail-fast: false
-      matrix:
-        base_image:
-          - bazzite
-          - bazzite-nvidia-open
-
     env:
-      BASE_IMAGE: ${{ matrix.base_image }}
+      BASE_IMAGE: bazzite-nvidia-open
 
     permissions:
       contents: read
@@ -105,12 +98,11 @@ jobs:
 
           echo "SOURCE_VERSION_MAJOR=$SOURCE_VERSION_MAJOR" >>$GITHUB_OUTPUT
 
-      - name: Generate output image ref
+      - name: Set output image name
         id: gen_image_ref
         run: |
-          # Strip -open suffix if present, then replace bazzite with bazzite-ai
-          IMAGE_NAME="${BASE_IMAGE/-open/}"
-          IMAGE_NAME="${IMAGE_NAME/bazzite/bazzite-ai}"
+          # Unified image name for all builds
+          IMAGE_NAME="bazzite-ai"
           echo "IMAGE_NAME=${IMAGE_NAME}" | tee -a "$GITHUB_ENV"
 
       # Image metadata for https://artifacthub.io/ - This is optional but is highly recommended so we all can get a index of all the custom images

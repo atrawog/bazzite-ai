@@ -46,9 +46,9 @@ For Podman/Docker GPU access, follow the setup below:
 
 ### Prerequisites
 
-**You must be running bazzite-ai-nvidia or bazzite-ai (KDE variants).**
+**You must be running bazzite-ai (KDE only).**
 
-⚠️ **Important**: Bazzite AI only supports KDE Plasma variants. GNOME variants are not officially supported.
+⚠️ **Important**: Bazzite AI only supports KDE Plasma, not GNOME.
 
 ### Verify Your Variant
 
@@ -56,18 +56,17 @@ For Podman/Docker GPU access, follow the setup below:
 # Check which variant you're running
 cat /usr/share/ublue-os/image-info.json | jq -r '."image-name"'
 
-# Should output one of:
-# - bazzite-ai-nvidia  (KDE with NVIDIA - required for GPU)
-# - bazzite-ai         (KDE without NVIDIA - CPU only)
+# Should output:
+# - bazzite-ai  (KDE with NVIDIA open driver support - works on all GPUs)
 ```
 
-If you're not on bazzite-ai-nvidia, you cannot use GPU acceleration in containers. You can still use the devcontainer in CPU-only mode.
+The unified bazzite-ai image includes nvidia-container-toolkit pre-installed for GPU container support.
 
 ### Podman/Docker Setup Steps
 
 #### Step 1: Verify NVIDIA Drivers
 
-On bazzite-ai-nvidia, NVIDIA drivers are pre-installed. Verify they're loaded:
+On bazzite-ai, NVIDIA open drivers are pre-installed. Verify they're loaded:
 
 ```bash
 # Check NVIDIA kernel modules
@@ -83,11 +82,11 @@ lsmod | grep nvidia
 nvidia-smi
 ```
 
-If `nvidia-smi` doesn't work, you may need to reboot after installing bazzite-ai-nvidia.
+If `nvidia-smi` doesn't work, you may need to reboot after installing bazzite-ai.
 
 #### Step 2: Verify nvidia-container-toolkit Installation
 
-The toolkit is pre-installed on bazzite-ai-nvidia variants:
+The toolkit is pre-installed on bazzite-ai:
 
 ```bash
 # Check if installed
@@ -100,7 +99,7 @@ nvidia-container-toolkit --version
 which nvidia-ctk
 ```
 
-If not installed (shouldn't happen on recent builds), reinstall bazzite-ai-nvidia or build a new image.
+If not installed (shouldn't happen on recent builds), reinstall bazzite-ai or build a new image.
 
 #### Step 3: Generate CDI Configuration
 
@@ -170,18 +169,18 @@ just test-cuda-devcontainer
 
 **Symptom**: `ujust setup-gpu-containers` says nvidia-container-toolkit not found
 
-**Cause**: You're not on bazzite-ai-nvidia variant, or running an old build
+**Cause**: Running an old build before nvidia-container-toolkit was included
 
 **Solutions**:
 
-1. Verify you're on nvidia variant:
+1. Verify you're on bazzite-ai:
    ```bash
    cat /usr/share/ublue-os/image-info.json | jq -r '."image-name"'
    ```
 
-2. Rebase to nvidia variant:
+2. Update to latest version:
    ```bash
-   rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai-nvidia:stable
+   rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai:stable
    systemctl reboot
    ```
 
@@ -197,7 +196,7 @@ just test-cuda-devcontainer
 
 **Solutions**:
 
-1. Reboot after installing bazzite-ai-nvidia:
+1. Reboot after installing bazzite-ai:
    ```bash
    systemctl reboot
    ```
@@ -348,7 +347,7 @@ nvidia-smi dmon
 
 Use this checklist to verify everything is working:
 
-- [ ] Running bazzite-ai-nvidia (KDE variant)
+- [ ] Running bazzite-ai (KDE)
 - [ ] `nvidia-smi` works on host
 - [ ] `nvidia-container-toolkit` is installed
 - [ ] `/etc/cdi/nvidia.yaml` exists
@@ -358,8 +357,8 @@ Use this checklist to verify everything is working:
 
 ## Related Documentation
 
-- [DEVCONTAINER.md](DEVCONTAINER.md) - Devcontainer usage guide
-- [ISO-BUILD.md](ISO-BUILD.md) - Building bazzite-ai-nvidia ISO
+- [CONTAINER.md](CONTAINER.md) - Container usage guide
+- [ISO-BUILD.md](ISO-BUILD.md) - Building bazzite-ai ISO
 - [CLAUDE.md](../CLAUDE.md) - Full repository documentation
 
 ## External Resources

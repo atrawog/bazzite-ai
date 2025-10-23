@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 # Configuration
 REPO="atrawog/bazzite-ai"
 IMAGE_BASE="ghcr.io/atrawog/bazzite-ai"
-IMAGE_NVIDIA="ghcr.io/atrawog/bazzite-ai-nvidia"
+IMAGE_NVIDIA="ghcr.io/atrawog/bazzite-ai"
 
 # Helper functions
 log_info() {
@@ -113,7 +113,7 @@ pull_images() {
 
     log_info "Tagging images for local use..."
     podman tag "${IMAGE_BASE}:latest" localhost/bazzite-ai:latest
-    podman tag "${IMAGE_NVIDIA}:latest" localhost/bazzite-ai-nvidia:latest
+    podman tag "${IMAGE_NVIDIA}:latest" localhost/bazzite-ai:latest
 
     log_success "Images ready"
 }
@@ -122,7 +122,7 @@ pull_images() {
 build_isos() {
     local tag=$1
     local iso_base="bazzite-ai-${tag}.iso"
-    local iso_nvidia="bazzite-ai-nvidia-${tag}.iso"
+    local iso_nvidia="bazzite-ai-${tag}.iso"
 
     log_info "Building base ISO (this will take 30-60 minutes)..."
     just build-iso localhost/bazzite-ai latest
@@ -136,7 +136,7 @@ build_isos() {
     fi
 
     log_info "Building NVIDIA ISO (this will take 30-60 minutes)..."
-    just build-iso-nvidia localhost/bazzite-ai-nvidia latest
+    just build-iso-nvidia localhost/bazzite-ai latest
 
     if [ -f "output/bootiso/install.iso" ]; then
         mv output/bootiso/install.iso "$iso_nvidia"
@@ -173,7 +173,7 @@ create_release() {
 
     # Get base image digest for release notes
     local base_digest=$(podman inspect localhost/bazzite-ai:latest | jq -r '.[0].Digest' || echo "unknown")
-    local nvidia_digest=$(podman inspect localhost/bazzite-ai-nvidia:latest | jq -r '.[0].Digest' || echo "unknown")
+    local nvidia_digest=$(podman inspect localhost/bazzite-ai:latest | jq -r '.[0].Digest' || echo "unknown")
 
     gh release create "$tag" \
       --repo "$REPO" \
