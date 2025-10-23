@@ -281,8 +281,6 @@ jobs:
             image: bazzite-ai-container-nvidia
             target: nvidia-container
             description: NVIDIA/CUDA container with cuDNN and TensorRT for bazzite-ai
-            # Free up disk space for NVIDIA variant (cuDNN + TensorRT = ~1GB)
-            maximize_space: true
 
     permissions:
       contents: read
@@ -293,12 +291,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      # Free up disk space only for NVIDIA variant
-      - name: Maximize build space
-        if: matrix.variant.maximize_space == true
-        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
-        with:
-          remove-codeql: true
+      # Monitor disk space (temporary validation that removal is safe)
+      - name: Check initial disk space
+        run: |
+          echo "=== Disk Space Before Build ==="
+          df -h
+          echo "=== Available Space Summary ==="
+          df -h / | awk 'NR==2 {print "Root: " $4 " available (" $5 " used)"}'
 
       # Persistent DNF5 cache shared across all builds
       - name: Cache DNF5 packages
@@ -378,6 +377,22 @@ jobs:
             --target=${{ matrix.variant.target }}
           build-args: |
             FEDORA_VERSION=42
+
+      # Monitor disk space (temporary validation that removal is safe)
+      - name: Check final disk space
+        run: |
+          echo "=== Disk Space After Build ==="
+          df -h
+          echo "=== Available Space Summary ==="
+          df -h / | awk 'NR==2 {print "Root: " $4 " available (" $5 " used)"}'
+          echo "=== Peak Usage Check ==="
+          USAGE=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+          echo "Peak disk usage: ${USAGE}%"
+          if [ "$USAGE" -gt 85 ]; then
+            echo "::warning::Disk usage exceeded 85% - may need optimization"
+          else
+            echo "✓ Disk usage is acceptable (<85%)"
+          fi
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3

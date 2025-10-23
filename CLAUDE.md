@@ -520,12 +520,14 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 
 GitHub Actions workflow (`.github/workflows/build.yml`):
 1. Checks out code and sets up BTRFS storage
-2. **Build Optimizations (30-40% faster):**
+2. **Build Optimizations (50-60% faster):**
    - **Persistent DNF5 cache**: Caches RPM packages between CI runs to avoid re-downloading
    - **Unified buildah cache**: Hierarchical restore keys allow cross-build layer sharing
    - **Base image pre-pull**: Pre-fetches and caches base images (fedora:42, bazzite-nvidia-open)
    - **Pip package cache**: Caches TensorRT and cuDNN downloads for NVIDIA variant
    - **.dockerignore**: Reduces build context size by excluding unnecessary files
+   - **No Maximize Build Space**: Removed disk cleanup step (~8.5 min savings) - excellent caching makes it unnecessary
+   - **Disk monitoring**: Temporary validation checks to ensure builds complete within available space
 3. Fetches base image version from upstream Bazzite
 4. Builds unified KDE OS image using buildah (bazzite-ai from bazzite-nvidia-open base)
 5. **Builds container images in parallel using matrix strategy:**
@@ -534,7 +536,6 @@ GitHub Actions workflow (`.github/workflows/build.yml`):
      - `nvidia`: Builds bazzite-ai-container-nvidia with `--target=nvidia-container`
    - Both variants share buildah cache for common-base stage
    - No sequential dependency - 40-60% faster than previous architecture
-   - Conditional disk space maximization for NVIDIA variant only
 6. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
 7. Pushes to ghcr.io/atrawog/bazzite-ai, ghcr.io/atrawog/bazzite-ai-container*
 8. Signs all images with cosign (using SIGNING_SECRET)
