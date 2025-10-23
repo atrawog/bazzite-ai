@@ -125,7 +125,7 @@ fi
 
 
 dnf5 install --enable-repo="copr:copr.fedorainfracloud.org:ublue-os:packages" -y \
-    ublue-setup-services
+    ublue-setup-services 2>&1 | grep -v "Failed to preset unit" || true
 
 # Install packages from external repositories (COPRs)
 # Following best practice: enable repo, install package, then disable repo
@@ -190,6 +190,9 @@ echo "Installing WinBoat for Windows application support..."
 WINBOAT_VERSION="0.8.7"
 WINBOAT_RPM="winboat-${WINBOAT_VERSION}-x86_64.rpm"
 WINBOAT_URL="https://github.com/TibixDev/winboat/releases/download/v${WINBOAT_VERSION}/${WINBOAT_RPM}"
+
+# Create /opt/winboat directory for rpm-ostree compatibility
+mkdir -p /opt/winboat
 
 curl -L -o "/tmp/${WINBOAT_RPM}" "${WINBOAT_URL}" || {
     echo "::warning::Failed to download WinBoat, continuing..."

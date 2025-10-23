@@ -232,17 +232,13 @@ jobs:
       - name: Sign container image
         if: github.event_name != 'pull_request'
         env:
-          LOWERCASE_REGISTRY: ${{ steps.lowercase.outputs.registry }}
-          LOWERCASE_IMAGE: ${{ steps.lowercase.outputs.image }}
-          TAGS_TO_SIGN: ${{ steps.metadata.outputs.tags }}
-          TAGS: ${{ steps.push.outputs.digest }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+          REGISTRY_PATH: ${{ steps.push.outputs.registry-path }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
-          IMAGE_FULL="${LOWERCASE_REGISTRY}/${LOWERCASE_IMAGE}"
-          for tag in ${TAGS_TO_SIGN}; do
-            cosign sign -y --key env://COSIGN_PRIVATE_KEY $IMAGE_FULL:$tag
-          done
+          # Sign using digest instead of tags to avoid warnings
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${REGISTRY_PATH}@${DIGEST}
 
   build_devcontainer:
     name: Build devcontainer image
@@ -265,7 +261,6 @@ jobs:
         uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5
         id: metadata
         with:
-          images: ghcr.io/${{ github.repository_owner }}/bazzite-ai-devcontainer
           tags: |
             type=raw,value=latest
             type=raw,value=stable
@@ -323,16 +318,13 @@ jobs:
         if: github.event_name != 'pull_request'
         continue-on-error: true  # Don't fail build if signing fails
         env:
-          LOWERCASE_REGISTRY: ${{ steps.lowercase.outputs.registry }}
-          LOWERCASE_IMAGE: ${{ steps.lowercase.outputs.image }}
-          TAGS_TO_SIGN: ${{ steps.metadata.outputs.tags }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+          REGISTRY_PATH: ${{ steps.push.outputs.registry-path }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
-          IMAGE_FULL="${LOWERCASE_REGISTRY}/${LOWERCASE_IMAGE}"
-          for tag in ${TAGS_TO_SIGN}; do
-            cosign sign -y --key env://COSIGN_PRIVATE_KEY $IMAGE_FULL:$tag || echo "Warning: Failed to sign $IMAGE_FULL:$tag"
-          done
+          # Sign using digest instead of tags to avoid warnings
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${REGISTRY_PATH}@${DIGEST}
 
   check:
     name: Check all builds successful

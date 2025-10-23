@@ -33,7 +33,7 @@ dnf5 install -y \
     neovim \
     nodejs nodejs20 nodejs20-devel nodejs20-full-i18n nodejs20-npm npm \
     php \
-    podman podman-compose podman-docker podman-remote \
+    podman podman-compose podman-remote \
     python3 python3-devel python3-pip python3-tkinter \
     rpm-sign \
     squashfuse \
