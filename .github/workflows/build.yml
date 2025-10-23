@@ -141,6 +141,16 @@ jobs:
           sep-tags: " "
           sep-annotations: " "
 
+      # Cache buildah layers to speed up incremental builds
+      # Cache key includes Containerfile and all build scripts for invalidation
+      - name: Cache buildah layers
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/containers
+          key: ${{ runner.os }}-buildah-${{ hashFiles('Containerfile', 'build_files/**') }}
+          restore-keys: |
+            ${{ runner.os }}-buildah-
+
       - name: Build Image
         id: build_image
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2.13

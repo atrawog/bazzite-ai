@@ -11,6 +11,7 @@ ARG IMAGE_NAME="${IMAGE_NAME:-bazzite-ai}"
 ARG IMAGE_VENDOR="${IMAGE_VENDOR:-atrawog}"
 
 RUN --mount=type=tmpfs,dst=/tmp \
+  --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
   --mount=type=bind,from=ctx,source=/,target=/run/context \
   mkdir -p /var/roothome && \
   /run/context/build_files/build.sh
