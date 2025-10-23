@@ -1,0 +1,180 @@
+# Unified Multi-Stage Containerfile for bazzite-ai development containers
+# Builds both CPU-only (base) and NVIDIA/CUDA (nvidia) variants from shared base
+# Use --target to select which variant to build:
+#   --target=base-container     → bazzite-ai-container (CPU-only)
+#   --target=nvidia-container   → bazzite-ai-container-nvidia (GPU)
+
+ARG FEDORA_VERSION=42
+
+################################################################################
+# Stage 1: Common Base (shared by both variants)
+# Contains all shared development tools and configuration
+# Maximum layer reuse and caching efficiency
+################################################################################
+FROM fedora:${FEDORA_VERSION} AS common-base
+
+# Use DNF cache mount for faster rebuilds (similar to OS image optimization)
+RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
+    --mount=type=tmpfs,dst=/tmp \
+    dnf5 install -y \
+    # Core development tools
+    alsa-lib-devel \
+    arch-install-scripts \
+    autoconf \
+    automake \
+    bridge-utils \
+    ccache cmake \
+    curl \
+    debootstrap \
+    dislocker \
+    dotnet-sdk-9.0 \
+    ecryptfs-utils \
+    fdupes \
+    fuse-devel \
+    fuse-dislocker \
+    fuse3-devel \
+    gcc gcc-c++ make \
+    gh \
+    git git-lfs \
+    golang-bazil-fuse-devel \
+    golang-bin \
+    html2text \
+    htop \
+    jdupes \
+    libtool \
+    neovim \
+    nodejs nodejs20 nodejs20-devel nodejs20-full-i18n nodejs20-npm npm \
+    php \
+    podman podman-compose podman-remote \
+    python3 python3-devel python3-pip python3-tkinter \
+    rpm-sign \
+    squashfuse \
+    strace \
+    sysstat \
+    vim \
+    wget \
+    zsh \
+    apptainer apptainer-suid && \
+    # Optional tools
+    dnf5 install -y \
+        android-tools \
+        qemu-kvm \
+        restic rclone \
+        || echo "Some optional packages not available, continuing..."
+
+# VS Code CLI - Import Microsoft GPG key for package verification
+RUN rpm --import https://packages.microsoft.com/keys/microsoft.asc || true && \
+    dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode" || true && \
+    dnf5 config-manager setopt vscode.enabled=0 vscode.gpgcheck=1 || true && \
+    dnf5 install --enable-repo="vscode" -y code || echo "VS Code install skipped"
+
+# Docker CE for container-in-container
+RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
+    dnf5 config-manager addrepo --from-repofile="https://download.docker.com/linux/fedora/docker-ce.repo" || true && \
+    dnf5 config-manager setopt docker-ce-stable.enabled=0 || true && \
+    dnf5 install -y --enable-repo="docker-ce-stable" \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-ce \
+        docker-ce-cli \
+        docker-compose-plugin || \
+    dnf5 install -y --enable-repo="docker-ce-test" \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-ce \
+        docker-ce-cli \
+        docker-compose-plugin || \
+    echo "Docker CE install skipped"
+
+# iptable_nat for docker-in-docker
+RUN mkdir -p /etc/modules-load.d && \
+    echo "iptable_nat" >> /etc/modules-load.d/ip_tables.conf || true
+
+# Install devcontainers CLI for container automation
+RUN npm install -g @devcontainers/cli || echo "devcontainers CLI install skipped"
+
+# Install pixi.sh for package management
+RUN curl -fsSL https://pixi.sh/install.sh | bash -s -- --yes || echo "pixi install skipped"
+
+# Claude Code CLI
+RUN curl -fsSL https://claude.ai/install.sh | bash || echo "Claude Code install skipped"
+
+# Inline cleanup to reduce layer size (preserve cache mount)
+RUN dnf5 clean all || true
+
+# Create non-root user (shared by both variants)
+RUN useradd -m -s /bin/zsh -G wheel devuser && \
+    echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+WORKDIR /workspace
+
+################################################################################
+# Stage 2a: Base Container (CPU-only variant)
+# Final stage for bazzite-ai-container
+################################################################################
+FROM common-base AS base-container
+
+# Set environment for base variant (no NVIDIA/CUDA references)
+ENV IMAGE_NAME=bazzite-ai-container
+ENV IMAGE_VENDOR=atrawog
+
+USER devuser
+
+################################################################################
+# Stage 2b: NVIDIA Additions
+# Adds cuDNN, TensorRT, and CUDA environment on top of common base
+# This stage can be cached independently from base-container
+################################################################################
+FROM common-base AS nvidia-additions
+
+# CUDA environment (provided by host via nvidia-container-toolkit)
+# These paths will be available when GPU is passed through from host
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+
+# Add negativo17 multimedia repository for cuDNN
+# CUDA packages moved to multimedia repo in Fedora 42
+RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
+    dnf5 config-manager addrepo \
+        --from-repofile="https://negativo17.org/repos/fedora-multimedia.repo" && \
+    dnf5 config-manager setopt "fedora-multimedia.enabled=0" && \
+    # Import GPG key
+    rpm --import https://negativo17.org/repos/RPM-GPG-KEY-slaanesh || true
+
+# Install cuDNN from repository
+RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
+    dnf5 install -y --enable-repo="fedora-multimedia" cuda-cudnn || { \
+        echo "::warning::cuDNN not available in repository - using Python wheels..."; \
+        pip3 install --root-user-action=ignore nvidia-cudnn-cu12 || \
+            echo "::warning::cuDNN installation failed"; \
+    }
+
+# Install TensorRT and additional NVIDIA Python tools
+RUN pip3 install --root-user-action=ignore \
+    nvidia-tensorrt \
+    nvidia-cuda-runtime-cu12 \
+    nvidia-nvtx-cu12 \
+    nvidia-nvjitlink-cu12 \
+    || echo "::warning::Some NVIDIA Python packages failed to install"
+
+# Inline cleanup to reduce layer size
+RUN dnf5 clean all || true
+
+# Verify installations
+RUN python3 -c "import tensorrt; print(f'TensorRT version: {tensorrt.__version__}')" 2>/dev/null || \
+        echo "::warning::TensorRT verification failed" && \
+    python3 -c "import nvidia.cudnn" 2>/dev/null || \
+        echo "::warning::cuDNN verification failed (may still work via host CUDA)"
+
+################################################################################
+# Stage 3: NVIDIA Container (GPU variant)
+# Final stage for bazzite-ai-container-nvidia
+################################################################################
+FROM nvidia-additions AS nvidia-container
+
+# Set environment for NVIDIA variant
+ENV IMAGE_NAME=bazzite-ai-container-nvidia
+ENV IMAGE_VENDOR=atrawog
+
+USER devuser

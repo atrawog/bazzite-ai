@@ -245,9 +245,24 @@ jobs:
           # Sign using digest instead of tags to avoid warnings
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${REGISTRY_PATH}@${DIGEST}
 
-  build_container:
-    name: Build container image (base)
+  build_containers:
+    name: Build container image (${{ matrix.variant.name }})
     runs-on: ubuntu-24.04
+
+    strategy:
+      fail-fast: false  # Allow both variants to complete even if one fails
+      matrix:
+        variant:
+          - name: base
+            image: bazzite-ai-container
+            target: base-container
+            description: Base development container for bazzite-ai (CPU-only)
+          - name: nvidia
+            image: bazzite-ai-container-nvidia
+            target: nvidia-container
+            description: NVIDIA/CUDA container with cuDNN and TensorRT for bazzite-ai
+            # Free up disk space for NVIDIA variant (cuDNN + TensorRT = ~1GB)
+            maximize_space: true
 
     permissions:
       contents: read
@@ -257,6 +272,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      # Free up disk space only for NVIDIA variant
+      - name: Maximize build space
+        if: matrix.variant.maximize_space == true
+        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
+        with:
+          remove-codeql: true
 
       - name: Get current date
         id: date
@@ -273,24 +295,37 @@ jobs:
             type=sha,enable=${{ github.event_name == 'pull_request' }}
             type=ref,event=pr
           labels: |
-            org.opencontainers.image.title=bazzite-ai-container
-            org.opencontainers.image.description=Base development container for bazzite-ai (CPU-only)
+            org.opencontainers.image.title=${{ matrix.variant.image }}
+            org.opencontainers.image.description=${{ matrix.variant.description }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
-            org.opencontainers.image.source=https://github.com/${{ github.repository_owner }}/bazzite-ai/blob/main/Containerfile.container
+            org.opencontainers.image.source=https://github.com/${{ github.repository_owner }}/bazzite-ai/blob/main/Containerfile.containers
             org.opencontainers.image.url=https://github.com/${{ github.repository_owner }}/bazzite-ai
             org.opencontainers.image.vendor=${{ github.repository_owner }}
           sep-tags: " "
           sep-annotations: " "
 
+      # Cache buildah layers for faster incremental builds
+      # Both variants share cache for common-base stage
+      - name: Cache buildah layers
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/containers
+          key: ${{ runner.os }}-buildah-containers-${{ hashFiles('Containerfile.containers', 'build_files/devcontainer/**', 'build_files/container-nvidia/**') }}
+          restore-keys: |
+            ${{ runner.os }}-buildah-containers-
+
       - name: Build Container
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2.13
         id: build
         with:
-          containerfiles: ./Containerfile.container
-          image: bazzite-ai-container
+          containerfiles: ./Containerfile.containers
+          image: ${{ matrix.variant.image }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           oci: false
+          # Use --target to select which variant to build
+          extra-args: |
+            --target=${{ matrix.variant.target }}
           build-args: |
             FEDORA_VERSION=42
 
@@ -306,7 +341,7 @@ jobs:
         id: lowercase
         run: |
           echo "registry=ghcr.io/${{ github.repository_owner }}" >> $GITHUB_OUTPUT
-          echo "image=bazzite-ai-container" >> $GITHUB_OUTPUT
+          echo "image=${{ matrix.variant.image }}" >> $GITHUB_OUTPUT
 
       - name: Push to GHCR
         uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
@@ -333,107 +368,11 @@ jobs:
           # Sign using digest instead of tags to avoid warnings
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${REGISTRY_PATH}@${DIGEST}
 
-  build_container_nvidia:
-    name: Build container image (nvidia)
-    runs-on: ubuntu-24.04
-    needs: build_container
-
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      # Free up disk space before building NVIDIA container (cuDNN + TensorRT = ~1GB)
-      - name: Maximize build space
-        uses: ublue-os/remove-unwanted-software@cc0becac701cf642c8f0a6613bbdaf5dc36b259e # v9
-        with:
-          remove-codeql: true
-
-      - name: Get current date
-        id: date
-        run: echo "date=$(date -u +%Y\-%m\-%d\T%H\:%M\:%S\Z)" >> $GITHUB_OUTPUT
-
-      - name: Image Metadata
-        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5
-        id: metadata
-        with:
-          tags: |
-            type=raw,value=latest
-            type=raw,value=stable
-            type=raw,value={{date 'YYYYMMDD'}}
-            type=sha,enable=${{ github.event_name == 'pull_request' }}
-            type=ref,event=pr
-          labels: |
-            org.opencontainers.image.title=bazzite-ai-container-nvidia
-            org.opencontainers.image.description=NVIDIA/CUDA container with cuDNN and TensorRT for bazzite-ai
-            org.opencontainers.image.created=${{ steps.date.outputs.date }}
-            org.opencontainers.image.source=https://github.com/${{ github.repository_owner }}/bazzite-ai/blob/main/Containerfile.container-nvidia
-            org.opencontainers.image.url=https://github.com/${{ github.repository_owner }}/bazzite-ai
-            org.opencontainers.image.vendor=${{ github.repository_owner }}
-          sep-tags: " "
-          sep-annotations: " "
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Lowercase Image
-        id: lowercase
-        run: |
-          echo "registry=ghcr.io/${{ github.repository_owner }}" >> $GITHUB_OUTPUT
-          echo "base_image=bazzite-ai-container" >> $GITHUB_OUTPUT
-          echo "nvidia_image=bazzite-ai-container-nvidia" >> $GITHUB_OUTPUT
-
-      - name: Build NVIDIA Container
-        uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2.13
-        id: build
-        with:
-          containerfiles: ./Containerfile.container-nvidia
-          image: bazzite-ai-container-nvidia
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
-          oci: false
-          build-args: |
-            BASE_TAG=latest
-            BASE_IMAGE=${{ steps.lowercase.outputs.registry }}/${{ steps.lowercase.outputs.base_image }}
-
-      - name: Push to GHCR
-        uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
-        if: github.event_name != 'pull_request'
-        id: push
-        with:
-          registry: ghcr.io/${{ github.repository_owner }}
-          image: ${{ steps.lowercase.outputs.nvidia_image }}
-          tags: ${{ steps.metadata.outputs.tags }}
-
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
-        if: github.event_name != 'pull_request'
-
-      - name: Sign Image
-        if: github.event_name != 'pull_request'
-        continue-on-error: true  # Don't fail build if signing fails
-        env:
-          DIGEST: ${{ steps.push.outputs.digest }}
-          REGISTRY_PATH: ${{ steps.push.outputs.registry-path }}
-          COSIGN_EXPERIMENTAL: false
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-        run: |
-          # Sign using digest instead of tags to avoid warnings
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${REGISTRY_PATH}@${DIGEST}
-
   check:
     name: Check all builds successful
     if: always()
     runs-on: ubuntu-latest
-    needs: [build_push, build_container, build_container_nvidia]
+    needs: [build_push, build_containers]
     steps:
       - name: Check Jobs
         env:
