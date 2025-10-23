@@ -57,51 +57,84 @@ After running the rebase command, reboot your system to complete the installatio
 
 **Note:** To skip signature verification (not recommended), replace `ostree-image-signed:docker://ghcr.io` with `ostree-unverified-registry:ghcr.io`.
 
-## Devcontainer
+## Development Container
 
-For isolated development, use **bazzite-ai-devcontainer**:
+For isolated AI/ML development, use **bazzite-ai-devcontainer**:
 
-### Quick Start with VS Code
+### Quick Start with Apptainer (Recommended for HPC/Research)
+
+Apptainer provides single-file containers (.sif) ideal for reproducible research:
+
+```bash
+# 1. Pull the devcontainer
+ujust apptainer-pull-devcontainer
+
+# 2. Run with GPU support (auto-detected)
+ujust apptainer-run-devcontainer
+
+# 3. Your workspace is mounted at /workspace
+# Inside container:
+cd /workspace
+nvidia-smi  # Test GPU
+```
+
+**Benefits:**
+- ✅ Single .sif file - easy to archive and share
+- ✅ Native GPU support via `--nv` (no setup needed)
+- ✅ HPC/cluster friendly (no daemon, no root)
+- ✅ Auto-mounts your workspace directory
+
+### Alternative: VS Code Dev Containers
+
+For VS Code users, traditional Docker/Podman workflow:
 
 ```bash
 # 1. Open repository in VS Code
 code /path/to/bazzite-ai
 
 # 2. Command Palette (Ctrl+Shift+P) → "Reopen in Container"
-# 3. GPU is automatically detected!
+# 3. GPU automatically detected
 ```
 
-**One unified configuration** that works on both GPU and non-GPU systems. Uses the latest pre-built image from GitHub Container Registry.
+Uses pre-built image from GitHub Container Registry.
 
-### Standalone Usage
+### Manual Apptainer Usage
 
 ```bash
-# Pull pre-built image
-just pull-devcontainer
+# Pull specific version
+ujust apptainer-pull-devcontainer stable
 
-# Run with GPU
-just run-devcontainer
+# Run with custom workspace
+ujust apptainer-run-devcontainer latest /path/to/project
 
-# Or CPU-only mode
-just run-devcontainer-no-gpu
+# CPU-only mode
+ujust apptainer-run-devcontainer-cpu
+
+# Execute single command
+ujust apptainer-exec-devcontainer "python train.py"
 ```
 
-### Benefits
+### Container Features
 
-- **Safe Isolation**: Run Claude Code with `--dangerously-skip-permissions` safely
-- **CUDA Support**: Full GPU acceleration for AI/ML workloads
-- **All Tools**: VS Code, Docker, Python, Node.js, BPF tools, and more
-- **Consistent**: Same environment across all machines
+- **Full CUDA Support**: GPU acceleration for AI/ML workloads
+- **All Dev Tools**: VS Code, Docker, Python, Node.js, Claude Code, and more
+- **Safe Isolation**: Run `claude --dangerously-skip-permissions` safely
+- **Consistent Environment**: Same tools across all machines
 
 ### Requirements
 
-**For GPU acceleration**:
+**For GPU acceleration (Apptainer)**:
 - Must use **bazzite-ai-nvidia** (KDE variant) as host
-- Run `ujust setup-gpu-containers` once to enable GPU passthrough
+- NVIDIA drivers installed (pre-configured in bazzite-ai-nvidia)
+- No additional setup needed - Apptainer handles GPU automatically
 
-**Documentation**:
-- [Devcontainer Guide](docs/DEVCONTAINER.md) - Complete usage guide
-- [GPU Setup](docs/HOST-SETUP-GPU.md) - Host GPU configuration
+**For GPU acceleration (Podman/Docker)**:
+- Must use **bazzite-ai-nvidia** (KDE variant)
+- Run `ujust setup-gpu-containers` once for CDI config
+
+**For CPU-only**: Works on any bazzite-ai variant.
+
+See [DEVCONTAINER.md](docs/DEVCONTAINER.md) for comprehensive guide.
 
 ## Acknowledgments
 

@@ -473,3 +473,159 @@ install-dev-tools:
 
     echo ""
     echo -e "${green}${bold}✓ All development tools installed${normal}"
+
+# Pull bazzite-ai-devcontainer using Apptainer
+apptainer-pull-devcontainer tag="latest":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    TAG="{{ tag }}"
+    OUTPUT_NAME="bazzite-ai-devcontainer_${TAG}.sif"
+
+    echo -e "${bold}Pulling bazzite-ai-devcontainer via Apptainer${normal}"
+    echo "Registry: ghcr.io/atrawog/bazzite-ai-devcontainer:${TAG}"
+    echo "Output: $HOME/${OUTPUT_NAME}"
+    echo ""
+
+    cd "$HOME"
+    apptainer pull "docker://ghcr.io/atrawog/bazzite-ai-devcontainer:${TAG}"
+
+    echo ""
+    echo -e "${green}${bold}✓ Success${normal}"
+    echo "Container saved: $HOME/${OUTPUT_NAME}"
+    echo ""
+    echo "Run with:"
+    echo "  ujust apptainer-run-devcontainer"
+
+# Run bazzite-ai-devcontainer with Apptainer (GPU enabled)
+apptainer-run-devcontainer tag="latest" workspace="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    TAG="{{ tag }}"
+    WORKSPACE="{{ workspace }}"
+    SIF_FILE="$HOME/bazzite-ai-devcontainer_${TAG}.sif"
+
+    # Default workspace to current directory
+    if [[ -z "${WORKSPACE}" ]]; then
+        WORKSPACE="$(pwd)"
+    fi
+
+    # Check if container exists
+    if [[ ! -f "${SIF_FILE}" ]]; then
+        echo -e "${yellow}Container not found: ${SIF_FILE}${normal}"
+        echo "Pulling from GHCR..."
+        just apptainer-pull-devcontainer "${TAG}"
+    fi
+
+    echo -e "${bold}Starting bazzite-ai-devcontainer${normal}"
+    echo "Workspace: ${WORKSPACE}"
+    echo ""
+
+    # Check for GPU
+    if command -v nvidia-smi &> /dev/null; then
+        echo -e "${green}✓ NVIDIA GPU detected - enabling GPU support${normal}"
+        GPU_FLAG="--nv"
+    else
+        echo "No GPU detected - running in CPU-only mode"
+        GPU_FLAG=""
+    fi
+
+    echo ""
+    echo "Starting interactive shell..."
+
+    # Run with GPU support, writable tmpfs, and workspace bind
+    apptainer shell \
+        ${GPU_FLAG} \
+        --writable-tmpfs \
+        --bind "${WORKSPACE}:/workspace" \
+        --pwd /workspace \
+        "${SIF_FILE}"
+
+# Run bazzite-ai-devcontainer with Apptainer (CPU only)
+apptainer-run-devcontainer-cpu tag="latest" workspace="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    TAG="{{ tag }}"
+    WORKSPACE="{{ workspace }}"
+    SIF_FILE="$HOME/bazzite-ai-devcontainer_${TAG}.sif"
+
+    if [[ -z "${WORKSPACE}" ]]; then
+        WORKSPACE="$(pwd)"
+    fi
+
+    if [[ ! -f "${SIF_FILE}" ]]; then
+        echo "Pulling container..."
+        just apptainer-pull-devcontainer "${TAG}"
+    fi
+
+    echo -e "${bold}Starting bazzite-ai-devcontainer (CPU-only)${normal}"
+
+    apptainer shell \
+        --writable-tmpfs \
+        --bind "${WORKSPACE}:/workspace" \
+        --pwd /workspace \
+        "${SIF_FILE}"
+
+# Execute command in bazzite-ai-devcontainer via Apptainer
+apptainer-exec-devcontainer cmd tag="latest" workspace="":
+    #!/usr/bin/bash
+    set -euo pipefail
+
+    TAG="{{ tag }}"
+    CMD="{{ cmd }}"
+    WORKSPACE="{{ workspace }}"
+    SIF_FILE="$HOME/bazzite-ai-devcontainer_${TAG}.sif"
+
+    if [[ -z "${WORKSPACE}" ]]; then
+        WORKSPACE="$(pwd)"
+    fi
+
+    if [[ ! -f "${SIF_FILE}" ]]; then
+        echo "Container not found. Run: ujust apptainer-pull-devcontainer"
+        exit 1
+    fi
+
+    if command -v nvidia-smi &> /dev/null; then
+        GPU_FLAG="--nv"
+    else
+        GPU_FLAG=""
+    fi
+
+    apptainer exec \
+        ${GPU_FLAG} \
+        --writable-tmpfs \
+        --bind "${WORKSPACE}:/workspace" \
+        --pwd /workspace \
+        "${SIF_FILE}" \
+        ${CMD}
+
+# Show Apptainer setup information
+apptainer-info:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Apptainer Container Platform${normal}"
+    echo "HPC and scientific computing optimized"
+    echo ""
+    apptainer version
+    echo ""
+
+    if command -v nvidia-smi &> /dev/null; then
+        echo -e "${green}✓ NVIDIA GPU detected${normal}"
+        echo "Use --nv flag for GPU support"
+    else
+        echo "No NVIDIA GPU detected (CPU-only mode available)"
+    fi
+
+    echo ""
+    echo -e "${bold}Quick Start with bazzite-ai-devcontainer:${normal}"
+    echo "  ujust apptainer-pull-devcontainer   # Download container"
+    echo "  ujust apptainer-run-devcontainer    # Interactive shell"
+    echo ""
+    echo "Documentation: https://apptainer.org/docs/"

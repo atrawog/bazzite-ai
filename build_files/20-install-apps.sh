@@ -88,7 +88,9 @@ dnf5 install -y \
     wireshark \
     xorg-x11-server-devel \
     xorg-x11-server-Xorg \
-    zsh
+    zsh \
+    apptainer \
+    apptainer-suid
 
 # Restore UUPD update timer and Input Remapper
 sed -i 's@^NoDisplay=true@NoDisplay=false@' /usr/share/applications/input-remapper-gtk.desktop

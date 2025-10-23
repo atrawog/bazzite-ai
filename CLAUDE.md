@@ -14,7 +14,7 @@ Key technologies:
 - **Build System**: Containerfile-based OSTree image builds
 - **Task Runner**: Just (justfile)
 - **Package Manager**: dnf5, flatpak, homebrew (for fonts)
-- **Container Tools**: Podman/Docker (preferred: Podman)
+- **Container Tools**: Apptainer (HPC/research), Podman/Docker
 - **CI/CD**: GitHub Actions with buildah/cosign signing
 
 ## Architecture
@@ -41,6 +41,21 @@ The `build_files/build.sh` orchestrator runs scripts in numerical order:
 - `60-clean-base.sh` - Removes gaming-specific configs (autologin, deck mode)
 - `99-build-initramfs.sh` - Rebuilds initramfs
 - `999-cleanup.sh` - Final cleanup
+
+### Apptainer Integration
+
+All variants include **Apptainer** (formerly Singularity) for HPC-style container workflows:
+
+- **Primary Container**: `bazzite-ai-devcontainer` via Apptainer
+- **GPU Support**: Native via `--nv` flag (no nvidia-container-toolkit needed)
+- **Format**: Single .sif files for reproducibility
+- **Use Cases**: Research, compute clusters, scientific computing
+
+Quick usage:
+```bash
+ujust apptainer-pull-devcontainer   # Download devcontainer
+ujust apptainer-run-devcontainer    # Interactive shell with GPU
+```
 
 ### System Files Structure
 

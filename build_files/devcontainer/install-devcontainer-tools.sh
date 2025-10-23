@@ -41,7 +41,8 @@ dnf5 install -y \
     sysstat \
     vim \
     wget \
-    zsh
+    zsh \
+    apptainer apptainer-suid
 
 # Optional tools (install if available, skip if not)
 dnf5 install -y \

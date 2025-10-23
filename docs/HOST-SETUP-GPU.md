@@ -1,8 +1,50 @@
-# Host GPU Setup for Devcontainers
+# GPU Setup for Containers
 
-This guide explains how to set up GPU access for containers on your bazzite-ai-nvidia (KDE) host system.
+Bazzite AI supports two container platforms with GPU access:
 
-## Prerequisites
+## Apptainer (Native GPU Support)
+
+**No setup required!** Apptainer has built-in NVIDIA GPU support.
+
+### Quick Start
+
+```bash
+# Pull bazzite-ai-devcontainer
+ujust apptainer-pull-devcontainer
+
+# Run with GPU (auto-detected)
+ujust apptainer-run-devcontainer
+
+# Verify GPU access
+apptainer exec --nv ~/bazzite-ai-devcontainer_latest.sif nvidia-smi
+```
+
+### Manual Usage
+
+```bash
+# Any container with GPU
+apptainer run --nv my-container.sif
+
+# Specific GPU selection
+APPTAINERENV_CUDA_VISIBLE_DEVICES=0 apptainer run --nv container.sif
+
+# Multiple GPUs
+APPTAINERENV_CUDA_VISIBLE_DEVICES=0,1 apptainer run --nv container.sif
+```
+
+### How It Works
+
+Apptainer's `--nv` flag:
+- Binds `/dev/nvidia*` devices into container
+- Mounts CUDA libraries from host
+- Configures LD_LIBRARY_PATH automatically
+- No daemon or toolkit configuration needed
+
+## Podman/Docker (Requires CDI Setup)
+
+For Podman/Docker GPU access, follow the setup below:
+
+### Prerequisites
 
 **You must be running bazzite-ai-nvidia or bazzite-ai (KDE variants).**
 
@@ -21,9 +63,9 @@ cat /usr/share/ublue-os/image-info.json | jq -r '."image-name"'
 
 If you're not on bazzite-ai-nvidia, you cannot use GPU acceleration in containers. You can still use the devcontainer in CPU-only mode.
 
-## Setup Steps
+### Podman/Docker Setup Steps
 
-### Step 1: Verify NVIDIA Drivers
+#### Step 1: Verify NVIDIA Drivers
 
 On bazzite-ai-nvidia, NVIDIA drivers are pre-installed. Verify they're loaded:
 
@@ -43,7 +85,7 @@ nvidia-smi
 
 If `nvidia-smi` doesn't work, you may need to reboot after installing bazzite-ai-nvidia.
 
-### Step 2: Verify nvidia-container-toolkit Installation
+#### Step 2: Verify nvidia-container-toolkit Installation
 
 The toolkit is pre-installed on bazzite-ai-nvidia variants:
 
@@ -60,7 +102,7 @@ which nvidia-ctk
 
 If not installed (shouldn't happen on recent builds), reinstall bazzite-ai-nvidia or build a new image.
 
-### Step 3: Generate CDI Configuration
+#### Step 3: Generate CDI Configuration
 
 **This is a one-time setup** that enables GPU passthrough to containers via CDI (Container Device Interface).
 
@@ -89,7 +131,7 @@ ls -lh /etc/cdi/nvidia.yaml
 
 The CDI file tells Podman how to expose GPU devices to containers.
 
-### Step 4: Verify GPU Container Access
+#### Step 4: Verify GPU Container Access
 
 Test that containers can access your GPU:
 
@@ -108,7 +150,7 @@ podman run --rm --device nvidia.com/gpu=all \
 # +-------------------------------+----------------------+----------------------+
 ```
 
-### Step 5: Test with Devcontainer
+#### Step 5: Test with Devcontainer
 
 ```bash
 cd /path/to/bazzite-ai

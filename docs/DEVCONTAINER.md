@@ -20,9 +20,57 @@
 3. **Multi-platform Development**: Consistent environment across machines
 4. **Experimentation**: Test changes without affecting host system
 
-## Quick Start (3 Steps)
+## Quick Start: Choose Your Platform
 
-### Option A: VS Code (Recommended)
+### Option A: Apptainer (Recommended for HPC/Research)
+
+**Best for**: Scientific computing, HPC clusters, reproducible research
+
+```bash
+# Pull the devcontainer (creates single .sif file)
+ujust apptainer-pull-devcontainer
+
+# Run with GPU support (auto-detected)
+ujust apptainer-run-devcontainer
+
+# Inside container
+cd /workspace          # Your workspace is here
+nvidia-smi            # Test GPU
+python train.py       # Run your code
+```
+
+**Advantages:**
+- Single .sif file → Easy to share/archive for reproducibility
+- No daemon required → Works on HPC clusters
+- Native GPU via `--nv` → No nvidia-container-toolkit setup
+- Standard in research → Used across academia
+- Rootless by design → Secure by default
+
+**Manual Commands:**
+```bash
+# Pull from GHCR
+apptainer pull docker://ghcr.io/atrawog/bazzite-ai-devcontainer:latest
+
+# Interactive shell with GPU
+apptainer shell --nv --writable-tmpfs \
+  --bind $(pwd):/workspace \
+  bazzite-ai-devcontainer_latest.sif
+
+# Execute single command
+apptainer exec --nv --writable-tmpfs \
+  --bind $(pwd):/workspace \
+  bazzite-ai-devcontainer_latest.sif \
+  python script.py
+
+# CPU-only (omit --nv)
+apptainer shell --writable-tmpfs \
+  --bind $(pwd):/workspace \
+  bazzite-ai-devcontainer_latest.sif
+```
+
+### Option B: VS Code Dev Containers
+
+**Best for**: IDE integration, container-in-container development
 
 ```bash
 # 1. Open repository in VS Code
