@@ -51,10 +51,11 @@ dnf5 install -y \
     restic rclone \
     || echo "Some optional packages not available, continuing..."
 
-# VS Code CLI
+# VS Code CLI - Import Microsoft GPG key for package verification
+rpm --import https://packages.microsoft.com/keys/microsoft.asc || true
 dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode" || true
-dnf5 config-manager setopt vscode.enabled=0 vscode.gpgcheck=0 || true
-dnf5 install --nogpgcheck --enable-repo="vscode" -y code || echo "VS Code install skipped"
+dnf5 config-manager setopt vscode.enabled=0 vscode.gpgcheck=1 || true
+dnf5 install --enable-repo="vscode" -y code || echo "VS Code install skipped"
 
 # Docker CE for container-in-container
 docker_pkgs=(containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-compose-plugin)

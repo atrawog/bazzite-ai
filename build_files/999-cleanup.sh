@@ -21,6 +21,8 @@ rm -rf /var
 mkdir -p /var
 
 # Commit and lint container
+# Known lint warning: sysusers - Some /etc/group entries may lack systemd sysusers.d config
+# This is a lint warning that doesn't affect image functionality
 bootc container lint || true
 
 log "Cleanup completed"

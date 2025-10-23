@@ -101,12 +101,12 @@ systemctl enable input-remapper.service
 systemctl enable uupd.timer
 
 # Remove -deck specific changes to allow for login screens
-# Note: These files may not exist if building from plain bazzite base
-# Kept for historical compatibility and to ensure clean state
+# Note: These files/services may not exist when building from plain bazzite base
 rm -f /etc/sddm.conf.d/steamos.conf
 rm -f /etc/sddm.conf.d/virtualkbd.conf
 rm -f /usr/share/gamescope-session-plus/bootstrap_steam.tar.gz
-systemctl disable bazzite-autologin.service
+# Only disable autologin service if it exists (not present in plain bazzite)
+systemctl disable bazzite-autologin.service 2>/dev/null || echo "Note: bazzite-autologin.service not present (expected for non-deck base)"
 
 if [[ "$IMAGE_NAME" == *gnome* ]]; then
     # Remove SDDM and re-enable GDM on GNOME builds.
@@ -153,13 +153,13 @@ dnf5 config-manager setopt "copr:copr.fedorainfracloud.org:scottames:ghostty.ena
 # over using random coprs. Please keep this in mind when adding external dependencies.
 # If adding any dependency, make sure to always have it disabled by default and _only_ enable it on `dnf install`
 
-# Configure VS Code repository
+# Configure VS Code repository and import Microsoft GPG key
+rpm --import https://packages.microsoft.com/keys/microsoft.asc
 dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode"
 dnf5 config-manager setopt vscode.enabled=0
-# FIXME: gpgcheck is broken for vscode due to it using `asc` for checking
-# seems to be broken on newer rpm security policies.
-dnf5 config-manager setopt vscode.gpgcheck=0
-dnf5 install --nogpgcheck --enable-repo="vscode" -y \
+# GPG verification now enabled with proper key import
+dnf5 config-manager setopt vscode.gpgcheck=1
+dnf5 install --enable-repo="vscode" -y \
     code
 
 docker_pkgs=(
