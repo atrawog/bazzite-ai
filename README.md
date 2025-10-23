@@ -136,6 +136,44 @@ ujust apptainer-exec-devcontainer "python train.py"
 
 See [DEVCONTAINER.md](docs/DEVCONTAINER.md) for comprehensive guide.
 
+## Running Windows Applications
+
+**WinBoat** allows you to run Windows software natively on bazzite-ai:
+
+### Quick Start
+
+```bash
+# 1. Launch WinBoat
+winboat
+
+# 2. Follow setup wizard to configure Windows container
+# 3. Launch Windows apps from WinBoat interface
+```
+
+### Features
+
+- **Seamless Integration**: Windows apps appear as native Linux windows
+- **File Sharing**: Home directory accessible from Windows
+- **Full Desktop**: Access complete Windows desktop when needed
+- **Containerized**: Windows runs in isolated Docker container
+
+### Requirements
+
+- Minimum 4GB RAM (8GB+ recommended)
+- 32GB free disk space for Windows container
+- KVM virtualization enabled (pre-configured in bazzite-ai)
+
+### Use Cases
+
+- Run Windows-only applications (Adobe, AutoCAD, etc.)
+- Test Windows software without dual-boot
+- Access Windows development tools
+- Legacy Windows application support
+
+**Note**: WinBoat is beta software. Expect occasional issues.
+
+See [WinBoat Documentation](https://github.com/TibixDev/winboat) for details.
+
 ## Acknowledgments
 
 This project is built upon the work from [amyos](https://github.com/astrovm/amyos)

@@ -90,7 +90,10 @@ dnf5 install -y \
     xorg-x11-server-Xorg \
     zsh \
     apptainer \
-    apptainer-suid
+    apptainer-suid \
+    freerdp \
+    freerdp-libs \
+    fastfetch
 
 # Restore UUPD update timer and Input Remapper
 sed -i 's@^NoDisplay=true@NoDisplay=false@' /usr/share/applications/input-remapper-gtk.desktop
@@ -181,6 +184,25 @@ dnf5 install -y --enable-repo="docker-ce-stable" "${docker_pkgs[@]}" || {
 mkdir -p /etc/modules-load.d && cat >>/etc/modules-load.d/ip_tables.conf <<EOF
 iptable_nat
 EOF
+
+# Install WinBoat for Windows app integration
+echo "Installing WinBoat for Windows application support..."
+WINBOAT_VERSION="0.8.7"
+WINBOAT_RPM="winboat-${WINBOAT_VERSION}.x86_64.rpm"
+WINBOAT_URL="https://github.com/TibixDev/winboat/releases/download/v${WINBOAT_VERSION}/${WINBOAT_RPM}"
+
+curl -L -o "/tmp/${WINBOAT_RPM}" "${WINBOAT_URL}" || {
+    echo "::warning::Failed to download WinBoat, continuing..."
+}
+
+if [[ -f "/tmp/${WINBOAT_RPM}" ]]; then
+    dnf5 install -y "/tmp/${WINBOAT_RPM}" || {
+        echo "::warning::WinBoat installation failed, continuing..."
+    }
+    rm -f "/tmp/${WINBOAT_RPM}"
+else
+    echo "::warning::WinBoat RPM not found, skipping installation..."
+fi
 
 # Install NVIDIA Container Toolkit for GPU-enabled containers
 # Only for nvidia variants (KDE only - bazzite-ai only supports KDE)

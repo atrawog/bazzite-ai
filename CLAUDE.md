@@ -14,7 +14,7 @@ Key technologies:
 - **Build System**: Containerfile-based OSTree image builds
 - **Task Runner**: Just (justfile)
 - **Package Manager**: dnf5, flatpak, homebrew (for fonts)
-- **Container Tools**: Apptainer (HPC/research), Podman/Docker
+- **Container Tools**: Apptainer (HPC/research), Podman/Docker, WinBoat (Windows apps)
 - **CI/CD**: GitHub Actions with buildah/cosign signing
 
 ## Architecture
@@ -56,6 +56,26 @@ Quick usage:
 ujust apptainer-pull-devcontainer   # Download devcontainer
 ujust apptainer-run-devcontainer    # Interactive shell with GPU
 ```
+
+### WinBoat Integration (Windows App Support)
+
+**WinBoat** enables running Windows applications with seamless Linux integration:
+
+- **Purpose**: Run Windows-only software without Wine or dual-boot
+- **Technology**: Containerized Windows VM + RemoteApp protocol
+- **Integration**: Windows apps appear as native Linux windows
+- **Requirements**: Docker CE (pre-installed), 4GB RAM, 2 CPU threads
+
+Quick usage:
+```bash
+# Launch WinBoat GUI
+winboat
+
+# First-time setup will download Windows container
+# Configure through the GUI, then launch Windows apps
+```
+
+**Note**: WinBoat is beta software. Requires ~32GB disk space for Windows container.
 
 ### System Files Structure
 

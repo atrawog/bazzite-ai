@@ -629,3 +629,66 @@ apptainer-info:
     echo "  ujust apptainer-run-devcontainer    # Interactive shell"
     echo ""
     echo "Documentation: https://apptainer.org/docs/"
+
+# Launch WinBoat for Windows app integration
+winboat-launch:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Launching WinBoat${normal}"
+    echo "Windows app integration platform"
+    echo ""
+
+    if ! command -v winboat &> /dev/null; then
+        echo -e "${red}${bold}Error:${normal} WinBoat not installed"
+        echo "WinBoat should be pre-installed in bazzite-ai"
+        exit 1
+    fi
+
+    # Check Docker is running
+    if ! systemctl is-active --quiet docker; then
+        echo "Starting Docker service..."
+        sudo systemctl start docker
+    fi
+
+    winboat
+
+# Show WinBoat information
+winboat-info:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}WinBoat - Windows App Integration${normal}"
+    echo "Run Windows applications with seamless Linux integration"
+    echo ""
+
+    if command -v winboat &> /dev/null; then
+        echo -e "${green}✓ WinBoat installed${normal}"
+    else
+        echo -e "${red}✗ WinBoat not installed${normal}"
+        exit 1
+    fi
+
+    if command -v xfreerdp &> /dev/null; then
+        echo -e "${green}✓ FreeRDP installed${normal}"
+        xfreerdp --version | head -1
+    else
+        echo -e "${red}✗ FreeRDP not installed${normal}"
+    fi
+
+    if systemctl is-active --quiet docker; then
+        echo -e "${green}✓ Docker running${normal}"
+    else
+        echo -e "${yellow}⚠ Docker not running${normal}"
+        echo "Start with: sudo systemctl start docker"
+    fi
+
+    echo ""
+    echo "Usage:"
+    echo "  ujust winboat-launch    # Start WinBoat GUI"
+    echo "  winboat                 # Direct command"
+    echo ""
+    echo "Documentation:"
+    echo "  https://github.com/TibixDev/winboat"
