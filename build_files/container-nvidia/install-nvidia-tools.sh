@@ -6,48 +6,46 @@ set -xeuo pipefail
 
 echo "Installing NVIDIA ML libraries (cuDNN, TensorRT)..."
 
-# Add negativo17 repository for cuDNN
-# This repo provides well-maintained CUDA ecosystem packages for Fedora
+# Add negativo17 multimedia repository for cuDNN
+# CUDA packages moved to multimedia repo in Fedora 42
 dnf5 config-manager addrepo \
-    --id="negativo17-nvidia" \
-    --set=name="negativo17 - NVIDIA" \
-    --set=baseurl="https://negativo17.org/repos/nvidia/fedora-\$releasever/\$basearch/" \
-    --set=enabled=0 \
-    --set=gpgcheck=1 \
-    --set=gpgkey="https://negativo17.org/repos/RPM-GPG-KEY-slaanesh"
+    --from-repofile="https://negativo17.org/repos/fedora-multimedia.repo"
+dnf5 config-manager setopt "fedora-multimedia.enabled=0"
 
 # Import GPG key
 rpm --import https://negativo17.org/repos/RPM-GPG-KEY-slaanesh || true
 
-# Install cuDNN from negativo17
-# Note: Version depends on CUDA version on host (will be auto-matched)
-dnf5 install -y --enable-repo="negativo17-nvidia" \
-    cuda-cudnn || {
-        echo "::warning::cuDNN installation failed - trying alternative method..."
-        # Fallback: Try installing via Python wheels
-        pip3 install --user nvidia-cudnn-cu12 || echo "::warning::cuDNN fallback also failed"
-    }
+# Try installing cuDNN from repository first
+dnf5 install -y --enable-repo="fedora-multimedia" cuda-cudnn || {
+    echo "::warning::cuDNN not available in repository - using Python wheels..."
+    # Fallback: Install via Python wheels
+    pip3 install --root-user-action=ignore nvidia-cudnn-cu12 || \
+        echo "::warning::cuDNN installation failed"
+}
 
-# Install TensorRT
-# TensorRT is best installed via Python wheels for containerized environments
+# Install TensorRT via Python wheels (not available in repos)
 echo "Installing TensorRT via Python wheels..."
-pip3 install --user nvidia-tensorrt || {
+pip3 install --root-user-action=ignore nvidia-tensorrt || {
     echo "::warning::TensorRT installation failed, continuing..."
 }
 
 # Install additional NVIDIA Python tools
-pip3 install --user \
+pip3 install --root-user-action=ignore \
     nvidia-cuda-runtime-cu12 \
     nvidia-nvtx-cu12 \
     nvidia-nvjitlink-cu12 \
     || echo "::warning::Some NVIDIA Python packages failed to install"
+
+# Clean dnf cache to reduce layer size and avoid buildah commit issues
+dnf5 clean all
+rm -rf /var/cache/dnf5/* || true
 
 # Verify installations
 echo "Verifying NVIDIA library installations..."
 
 if python3 -c "import tensorrt" 2>/dev/null; then
     echo "✓ TensorRT installed successfully"
-    python3 -c "import tensorrt; print(f'TensorRT version: {tensorrt.__version__}')"
+    python3 -c "import tensorrt; print(f'TensorRT version: {tensorrt.__version__}')" || true
 else
     echo "::warning::TensorRT verification failed"
 fi
