@@ -305,6 +305,7 @@ jobs:
       - name: Push to GHCR
         uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
         if: github.event_name != 'pull_request'
+        id: push
         with:
           registry: ghcr.io/${{ github.repository_owner }}
           image: ${{ steps.lowercase.outputs.image }}
