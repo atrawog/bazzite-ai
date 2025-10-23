@@ -154,7 +154,7 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           oci: false
           build-args: |
-            BASE_IMAGE=ghcr.io/${{ env.SOURCE_ORG }}/${{ matrix.base_image }}:${{ env.IMAGE_SOURCE_TAG || 'latest' }}
+            BASE_IMAGE=ghcr.io/${{ env.SOURCE_ORG }}/${{ env.BASE_IMAGE }}:${{ env.IMAGE_SOURCE_TAG || 'latest' }}
             IMAGE_NAME=${{ env.IMAGE_NAME }}
             IMAGE_VENDOR=${{ github.repository_owner }}
 
