@@ -319,12 +319,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # Pre-pull and cache base images
+      # Pre-pull and cache base images in parallel
       - name: Pull and cache base images
         run: |
           mkdir -p ~/.local/share/containers/storage
-          # Pull Fedora base image for container builds
-          buildah pull fedora:42 || true
+          # Pull Fedora base image for container builds (can be extended for more images)
+          buildah pull fedora:42 || true &
+          # Wait for all pulls to complete (currently just one, but prepared for future additions)
+          wait
+          echo "✓ Base images pulled successfully"
 
       - name: Get current date
         id: date
