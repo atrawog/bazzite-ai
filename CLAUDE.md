@@ -520,10 +520,11 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 
 GitHub Actions workflow (`.github/workflows/build.yml`):
 1. Checks out code and sets up BTRFS storage
-2. **Build Optimizations (50-60% faster):**
-   - **Persistent DNF5 cache**: Caches RPM packages between CI runs to avoid re-downloading
+2. **Build Optimizations (60-70% faster):**
+   - **Connected DNF5 cache**: RPM packages cached and mounted into builds via `/var/cache/dnf5` volume (30-50s savings per build)
+   - **Unified DNF cache keys**: OS and container builds share package cache for better hit rates across all jobs
    - **Unified buildah cache**: Hierarchical restore keys allow cross-build layer sharing
-   - **Base image pre-pull**: Pre-fetches and caches base images (fedora:42, bazzite-nvidia-open)
+   - **Parallel base image pre-pull**: Pre-fetches and caches base images concurrently (fedora:42, bazzite-nvidia-open)
    - **Pip package cache**: Caches TensorRT and cuDNN downloads for NVIDIA variant
    - **.dockerignore**: Reduces build context size by excluding unnecessary files
    - **No Maximize Build Space**: Removed disk cleanup step (~8.5 min savings) - excellent caching makes it unnecessary
