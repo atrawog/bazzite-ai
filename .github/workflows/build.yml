@@ -1,5 +1,5 @@
 ---
-name: Build Bazzite DX
+name: Build Bazzite AI
 on:
   push:
     branches:
@@ -33,8 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         base_image:
-          - bazzite-deck
-          - bazzite-deck-nvidia
+          - bazzite
+          - bazzite-nvidia-open
 
     env:
       BASE_IMAGE: ${{ matrix.base_image }}
@@ -108,7 +108,10 @@ jobs:
       - name: Generate output image ref
         id: gen_image_ref
         run: |
-          echo "IMAGE_NAME=${BASE_IMAGE/bazzite-deck/bazzite-ai}" | tee -a "$GITHUB_ENV"
+          # Strip -open suffix if present, then replace bazzite with bazzite-ai
+          IMAGE_NAME="${BASE_IMAGE/-open/}"
+          IMAGE_NAME="${IMAGE_NAME/bazzite/bazzite-ai}"
+          echo "IMAGE_NAME=${IMAGE_NAME}" | tee -a "$GITHUB_ENV"
 
       # Image metadata for https://artifacthub.io/ - This is optional but is highly recommended so we all can get a index of all the custom images
       # The metadata by itself is not going to do anything, you choose if you want your image to be on ArtifactHub or not.

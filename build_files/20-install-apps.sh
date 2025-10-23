@@ -101,6 +101,8 @@ systemctl enable input-remapper.service
 systemctl enable uupd.timer
 
 # Remove -deck specific changes to allow for login screens
+# Note: These files may not exist if building from plain bazzite base
+# Kept for historical compatibility and to ensure clean state
 rm -f /etc/sddm.conf.d/steamos.conf
 rm -f /etc/sddm.conf.d/virtualkbd.conf
 rm -f /usr/share/gamescope-session-plus/bootstrap_steam.tar.gz

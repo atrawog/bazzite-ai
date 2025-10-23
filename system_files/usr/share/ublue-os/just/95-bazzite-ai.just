@@ -4,7 +4,7 @@
 install-fonts:
     #!/usr/bin/bash
     echo "Installing extra fonts..."
-    brew bundle --file=/usr/share/ublue-os/homebrew/bazzite-dx-fonts.Brewfile
+    brew bundle --file=/usr/share/ublue-os/homebrew/bazzite-ai-fonts.Brewfile
 
 # Toggle default boot between Steam Game Mode (gamescope-session) and Desktop
 toggle-gamemode ACTION="":

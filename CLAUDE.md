@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is Bazzite AI - a custom fork of [Bazzite Developer Edition (DX)](https://github.com/ublue-os/bazzite-dx) with AI/ML-focused tooling and customizations. It's a container-based immutable Linux distribution built on top of [Bazzite](https://github.com/ublue-os/bazzite), extending it with developer tooling.
+This is Bazzite AI - a custom fork of [Bazzite](https://github.com/ublue-os/bazzite) with AI/ML-focused tooling and customizations. It's a container-based immutable Linux distribution built on top of Bazzite, extending it with developer tooling.
 
 **⚠️ Important**: Bazzite AI **only supports KDE Plasma variants**. GNOME variants are not officially supported.
 
 Key technologies:
-- **Base**: ublue-os/bazzite-deck (KDE Plasma) with/without NVIDIA
+- **Base**: ublue-os/bazzite (KDE Plasma) with open NVIDIA drivers
 - **Desktop**: KDE Plasma only
 - **Build System**: Containerfile-based OSTree image builds
 - **Task Runner**: Just (justfile)
@@ -23,7 +23,7 @@ Key technologies:
 
 This is NOT a traditional application repository. It builds bootable container images using:
 
-1. **Base Images**: Starts from `ghcr.io/ublue-os/bazzite-deck*:stable` variants
+1. **Base Images**: Starts from `ghcr.io/ublue-os/bazzite*:stable` and `ghcr.io/ublue-os/bazzite-nvidia-open:stable` variants
 2. **Build Process**: Multi-stage Containerfile that:
    - Copies `system_files/` (runtime config) and `build_files/` (build scripts) into image
    - Runs `build_files/build.sh` which orchestrates numbered build scripts
@@ -99,11 +99,11 @@ winboat
 # Build the container image locally
 just build [target_image] [tag]
 # Examples:
-just build bazzite-dx latest
+just build bazzite-ai latest
 just build  # Uses defaults from env vars
 
 # The build uses environment variables:
-# - IMAGE_NAME (default: bazzite-dx)
+# - IMAGE_NAME (default: bazzite-ai)
 # - DEFAULT_TAG (default: latest)
 # - REPO_ORGANIZATION (default: ublue-os)
 ```
@@ -337,8 +337,8 @@ Users can download via:
 
 Bazzite AI builds **2 KDE Plasma variants** (GNOME is not supported):
 
-- **bazzite-ai** - KDE Plasma (from `bazzite-deck`)
-- **bazzite-ai-nvidia** - KDE Plasma with NVIDIA drivers (from `bazzite-deck-nvidia`)
+- **bazzite-ai** - KDE Plasma (from `bazzite`)
+- **bazzite-ai-nvidia** - KDE Plasma with NVIDIA open drivers (from `bazzite-nvidia-open`)
 
 ⚠️ **Note**: Only KDE variants are officially supported. Any GNOME builds in CI are experimental/unofficial.
 
