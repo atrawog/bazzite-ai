@@ -1,0 +1,56 @@
+# Reduce build context size for faster builds
+# See: .github/workflows/build.yml optimization
+
+# Version control
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+*.txt
+!requirements.txt
+
+# Release artifacts (git-ignored, but exclude from context)
+releases/
+output/
+*.iso
+*.torrent
+*.sif
+
+# Development and testing
+.vscode/
+.devcontainer/
+*.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Container build artifacts
+.buildah/
+*.oci
+*.docker
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db

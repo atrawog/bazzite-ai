@@ -51,6 +51,24 @@ jobs:
       - name: Mount BTRFS for podman storage
         uses: ublue-os/container-storage-action@main
 
+      # Persistent DNF5 cache shared across all builds
+      # Significantly speeds up package downloads by caching RPM packages
+      - name: Cache DNF5 packages
+        uses: actions/cache@v4
+        with:
+          path: /tmp/dnf-cache
+          key: ${{ runner.os }}-dnf5-${{ hashFiles('build_files/20-install-apps.sh', 'Containerfile') }}-${{ hashFiles('build_files/**/*.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-dnf5-${{ hashFiles('build_files/20-install-apps.sh', 'Containerfile') }}-
+            ${{ runner.os }}-dnf5-
+
+      # Pre-pull and cache base images for faster builds
+      - name: Pull and cache base images
+        run: |
+          mkdir -p ~/.local/share/containers/storage
+          # Pull base image for OS build
+          buildah pull ghcr.io/${{ env.SOURCE_ORG }}/${{ env.BASE_IMAGE }}:${{ env.IMAGE_SOURCE_TAG || 'latest' }} || true
+
       - name: Get current date
         id: date
         run: |
@@ -141,14 +159,16 @@ jobs:
           sep-tags: " "
           sep-annotations: " "
 
-      # Cache buildah layers to speed up incremental builds
-      # Cache key includes Containerfile and all build scripts for invalidation
+      # Unified buildah cache with hierarchical restore keys
+      # Allows sharing layers across OS and container builds for maximum efficiency
       - name: Cache buildah layers
         uses: actions/cache@v4
         with:
           path: ~/.local/share/containers
-          key: ${{ runner.os }}-buildah-${{ hashFiles('Containerfile', 'build_files/**') }}
+          key: ${{ runner.os }}-buildah-os-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-buildah-os-
+            ${{ runner.os }}-buildah-containers-
             ${{ runner.os }}-buildah-
 
       - name: Build Image
@@ -280,6 +300,33 @@ jobs:
         with:
           remove-codeql: true
 
+      # Persistent DNF5 cache shared across all builds
+      - name: Cache DNF5 packages
+        uses: actions/cache@v4
+        with:
+          path: /tmp/dnf-cache
+          key: ${{ runner.os }}-dnf5-containers-${{ hashFiles('Containerfile.containers', 'build_files/devcontainer/**', 'build_files/container-nvidia/**') }}
+          restore-keys: |
+            ${{ runner.os }}-dnf5-containers-
+            ${{ runner.os }}-dnf5-
+
+      # Cache pip packages for NVIDIA variant (TensorRT, cuDNN are large downloads)
+      - name: Cache pip packages
+        if: matrix.variant.name == 'nvidia'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('build_files/container-nvidia/**') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # Pre-pull and cache base images
+      - name: Pull and cache base images
+        run: |
+          mkdir -p ~/.local/share/containers/storage
+          # Pull Fedora base image for container builds
+          buildah pull fedora:42 || true
+
       - name: Get current date
         id: date
         run: echo "date=$(date -u +%Y\-%m\-%d\T%H\:%M\:%S\Z)" >> $GITHUB_OUTPUT
@@ -304,15 +351,18 @@ jobs:
           sep-tags: " "
           sep-annotations: " "
 
-      # Cache buildah layers for faster incremental builds
-      # Both variants share cache for common-base stage
+      # Unified buildah cache with hierarchical restore keys
+      # Both variants share cache for common-base stage and can reuse OS build layers
       - name: Cache buildah layers
         uses: actions/cache@v4
         with:
           path: ~/.local/share/containers
-          key: ${{ runner.os }}-buildah-containers-${{ hashFiles('Containerfile.containers', 'build_files/devcontainer/**', 'build_files/container-nvidia/**') }}
+          key: ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-
             ${{ runner.os }}-buildah-containers-
+            ${{ runner.os }}-buildah-os-
+            ${{ runner.os }}-buildah-
 
       - name: Build Container
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2.13

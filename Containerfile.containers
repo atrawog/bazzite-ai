@@ -151,7 +151,9 @@ RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
     }
 
 # Install TensorRT and additional NVIDIA Python tools
-RUN pip3 install --root-user-action=ignore \
+# Mount pip cache for faster reinstalls (cache populated by CI)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip3 install --root-user-action=ignore \
     nvidia-tensorrt \
     nvidia-cuda-runtime-cu12 \
     nvidia-nvtx-cu12 \

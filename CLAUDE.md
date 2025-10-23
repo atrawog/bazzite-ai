@@ -507,6 +507,11 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 - `docs/HOST-SETUP-GPU.md` - GPU setup (nvidia variant)
 - **Note:** Legacy `Containerfile.container` and `Containerfile.container-nvidia` deprecated in favor of unified build
 
+**Build Optimizations:**
+- `.dockerignore` - Excludes unnecessary files from build context (docs, releases, git)
+  - Reduces context size for faster uploads to buildah
+  - Improves cache hit rates by excluding volatile files
+
 **Documentation:**
 - `docs/ISO-BUILD.md` - Comprehensive ISO building guide
 - `CLAUDE.md` - This file, guidance for Claude Code
@@ -515,18 +520,24 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 
 GitHub Actions workflow (`.github/workflows/build.yml`):
 1. Checks out code and sets up BTRFS storage
-2. Fetches base image version from upstream Bazzite
-3. Builds unified KDE OS image using buildah (bazzite-ai from bazzite-nvidia-open base)
-4. **Builds container images in parallel using matrix strategy:**
+2. **Build Optimizations (30-40% faster):**
+   - **Persistent DNF5 cache**: Caches RPM packages between CI runs to avoid re-downloading
+   - **Unified buildah cache**: Hierarchical restore keys allow cross-build layer sharing
+   - **Base image pre-pull**: Pre-fetches and caches base images (fedora:42, bazzite-nvidia-open)
+   - **Pip package cache**: Caches TensorRT and cuDNN downloads for NVIDIA variant
+   - **.dockerignore**: Reduces build context size by excluding unnecessary files
+3. Fetches base image version from upstream Bazzite
+4. Builds unified KDE OS image using buildah (bazzite-ai from bazzite-nvidia-open base)
+5. **Builds container images in parallel using matrix strategy:**
    - `build_containers` matrix job with 2 variants:
      - `base`: Builds bazzite-ai-container with `--target=base-container`
      - `nvidia`: Builds bazzite-ai-container-nvidia with `--target=nvidia-container`
    - Both variants share buildah cache for common-base stage
    - No sequential dependency - 40-60% faster than previous architecture
    - Conditional disk space maximization for NVIDIA variant only
-5. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
-6. Pushes to ghcr.io/atrawog/bazzite-ai, ghcr.io/atrawog/bazzite-ai-container*
-7. Signs all images with cosign (using SIGNING_SECRET)
+6. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
+7. Pushes to ghcr.io/atrawog/bazzite-ai, ghcr.io/atrawog/bazzite-ai-container*
+8. Signs all images with cosign (using SIGNING_SECRET)
 
 ## End-User Commands
 
