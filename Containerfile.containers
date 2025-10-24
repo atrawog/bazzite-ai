@@ -15,6 +15,7 @@ FROM fedora:${FEDORA_VERSION} AS common-minimal
 
 # Install minimal base utilities and Python environment
 RUN --mount=type=tmpfs,dst=/tmp \
+    --mount=type=cache,target=/var/cache/dnf5 \
     dnf5 install -y \
     # Core utilities
     curl \
@@ -25,8 +26,7 @@ RUN --mount=type=tmpfs,dst=/tmp \
     zsh \
     # Python environment
     python3 \
-    python3-pip \
-    && dnf5 clean all
+    python3-pip
 
 # Install pixi.sh for package management
 RUN curl -fsSL https://pixi.sh/install.sh | bash -s -- --yes || echo "pixi install skipped"
@@ -49,6 +49,7 @@ FROM common-minimal AS devel-additions
 
 # Install comprehensive development toolchain
 RUN --mount=type=tmpfs,dst=/tmp \
+    --mount=type=cache,target=/var/cache/dnf5 \
     dnf5 install -y \
     # Core development tools
     alsa-lib-devel \
@@ -91,13 +92,15 @@ RUN --mount=type=tmpfs,dst=/tmp \
         || echo "Some optional packages not available, continuing..."
 
 # VS Code CLI - Import Microsoft GPG key for package verification
-RUN rpm --import https://packages.microsoft.com/keys/microsoft.asc || true && \
+RUN --mount=type=cache,target=/var/cache/dnf5 \
+    rpm --import https://packages.microsoft.com/keys/microsoft.asc || true && \
     dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode" || true && \
     dnf5 config-manager setopt vscode.enabled=0 vscode.gpgcheck=1 || true && \
     dnf5 install --enable-repo="vscode" -y code || echo "VS Code install skipped"
 
 # Docker CE for container-in-container
-RUN dnf5 config-manager addrepo --from-repofile="https://download.docker.com/linux/fedora/docker-ce.repo" || true && \
+RUN --mount=type=cache,target=/var/cache/dnf5 \
+    dnf5 config-manager addrepo --from-repofile="https://download.docker.com/linux/fedora/docker-ce.repo" || true && \
     dnf5 config-manager setopt docker-ce-stable.enabled=0 || true && \
     dnf5 install -y --enable-repo="docker-ce-stable" \
         containerd.io \
@@ -120,8 +123,7 @@ RUN mkdir -p /etc/modules-load.d && \
 # Install devcontainers CLI for container automation
 RUN npm install -g @devcontainers/cli || echo "devcontainers CLI install skipped"
 
-# Cleanup to reduce layer size
-RUN dnf5 clean all || true
+# Cleanup not needed - cache mounts handle this automatically
 
 ################################################################################
 # Stage 2b: NVIDIA Additions
@@ -146,7 +148,8 @@ RUN dnf5 config-manager addrepo \
     rpm --import https://negativo17.org/repos/RPM-GPG-KEY-slaanesh || true
 
 # Install cuDNN from repository
-RUN dnf5 install -y --enable-repo="fedora-multimedia" cuda-cudnn || { \
+RUN --mount=type=cache,target=/var/cache/dnf5 \
+    dnf5 install -y --enable-repo="fedora-multimedia" cuda-cudnn || { \
         echo "::warning::cuDNN not available in repository - using Python wheels..."; \
         pip3 install --root-user-action=ignore nvidia-cudnn-cu12 || \
             echo "::warning::cuDNN installation failed"; \
@@ -162,8 +165,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     nvidia-nvjitlink-cu12 \
     || echo "::warning::Some NVIDIA Python packages failed to install"
 
-# Inline cleanup to reduce layer size
-RUN dnf5 clean all || true
+# Cleanup not needed - cache mounts handle this automatically
 
 # Verify installations
 RUN python3 -c "import tensorrt; print(f'TensorRT version: {tensorrt.__version__}')" 2>/dev/null || \

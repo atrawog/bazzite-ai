@@ -78,6 +78,6 @@ curl -fsSL https://pixi.sh/install.sh | bash -s -- --yes || echo "pixi install s
 # Claude Code CLI
 curl -fsSL https://claude.ai/install.sh | bash || echo "Claude Code install skipped"
 
-# Cleanup
-dnf5 clean all || true
-rm -rf /var/cache/dnf5 || true
+# Cleanup not needed - cache mounts handle this automatically
+# dnf5 clean all || true
+# rm -rf /var/cache/dnf5 || true

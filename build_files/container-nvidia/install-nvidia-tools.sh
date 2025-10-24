@@ -36,9 +36,9 @@ pip3 install --root-user-action=ignore \
     nvidia-nvjitlink-cu12 \
     || echo "::warning::Some NVIDIA Python packages failed to install"
 
-# Clean dnf cache to reduce layer size and avoid buildah commit issues
-dnf5 clean all
-rm -rf /var/cache/dnf5/* || true
+# Cleanup not needed - cache mounts handle this automatically
+# dnf5 clean all
+# rm -rf /var/cache/dnf5/* || true
 
 # Verify installations
 echo "Verifying NVIDIA library installations..."

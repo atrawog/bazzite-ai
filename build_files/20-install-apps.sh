@@ -228,4 +228,4 @@ echo "NVIDIA Container Toolkit installed. CDI config generation available via uj
 
 # Clean package cache immediately to reduce layer size
 # Final cleanup in 999-cleanup.sh will clean remaining artifacts
-dnf5 clean all
+# dnf5 clean all  # Not needed - using --mount=type=cache in Containerfile

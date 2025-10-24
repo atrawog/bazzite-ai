@@ -51,34 +51,6 @@ jobs:
       - name: Mount BTRFS for podman storage
         uses: ublue-os/container-storage-action@main
 
-      # Persistent DNF5 cache shared across all builds
-      # Significantly speeds up package downloads by caching RPM packages
-      - name: Cache DNF5 packages
-        uses: actions/cache@v4
-        id: dnf-cache
-        with:
-          path: /tmp/dnf-cache
-          key: ${{ runner.os }}-dnf5-os-${{ hashFiles('build_files/20-install-apps.sh', 'Containerfile') }}-${{ hashFiles('build_files/**/*.sh') }}
-          restore-keys: |
-            ${{ runner.os }}-dnf5-os-${{ hashFiles('build_files/20-install-apps.sh', 'Containerfile') }}-
-            ${{ runner.os }}-dnf5-os-
-            ${{ runner.os }}-dnf5-containers-
-            ${{ runner.os }}-dnf5-
-
-      # Set up DNF cache directory for buildah to use
-      - name: Set up DNF cache directory
-        run: |
-          sudo mkdir -p /var/cache/dnf5
-          sudo chown -R $(id -u):$(id -g) /var/cache/dnf5
-          # Restore from GitHub Actions cache if it exists
-          if [ -d "/tmp/dnf-cache/dnf5" ]; then
-            echo "Restoring DNF cache from /tmp/dnf-cache/dnf5 to /var/cache/dnf5"
-            sudo cp -rp /tmp/dnf-cache/dnf5/* /var/cache/dnf5/ || true
-            echo "Cache size: $(du -sh /var/cache/dnf5 | cut -f1)"
-          else
-            echo "No existing cache found, starting fresh"
-          fi
-
       # Pre-pull and cache base images for faster builds in parallel
       - name: Pull and cache base images
         run: |
@@ -218,18 +190,6 @@ jobs:
             BASE_IMAGE=ghcr.io/${{ env.SOURCE_ORG }}/${{ env.BASE_IMAGE }}:${{ env.IMAGE_SOURCE_TAG || 'latest' }}
             IMAGE_NAME=${{ env.IMAGE_NAME }}
             IMAGE_VENDOR=${{ github.repository_owner }}
-          # Mount DNF cache directory to speed up package downloads
-          extra-args: |
-            --volume /var/cache/dnf5:/var/cache/dnf5:z
-
-      # Save DNF cache back to GitHub Actions cache location
-      - name: Save DNF cache
-        if: always()
-        run: |
-          echo "Saving DNF cache from /var/cache/dnf5 to /tmp/dnf-cache"
-          mkdir -p /tmp/dnf-cache
-          sudo cp -rp /var/cache/dnf5 /tmp/dnf-cache/ || true
-          echo "Cache size: $(du -sh /tmp/dnf-cache | cut -f1)"
 
       # Manually save buildah cache with sudo to avoid permission errors
       # The standard actions/cache fails on setuid/shadow files
@@ -362,34 +322,6 @@ jobs:
           echo "=== Available Space Summary ==="
           df -h / | awk 'NR==2 {print "Root: " $4 " available (" $5 " used)"}'
 
-      # Persistent DNF5 cache shared across all builds
-      # Uses variant-specific keys but can restore from other variants
-      - name: Cache DNF5 packages
-        uses: actions/cache@v4
-        id: dnf-cache
-        with:
-          path: /tmp/dnf-cache
-          key: ${{ runner.os }}-dnf5-containers-${{ matrix.variant.name }}-${{ hashFiles('Containerfile.containers', 'build_files/devcontainer/**', 'build_files/container-nvidia/**') }}
-          restore-keys: |
-            ${{ runner.os }}-dnf5-containers-${{ matrix.variant.name }}-
-            ${{ runner.os }}-dnf5-containers-
-            ${{ runner.os }}-dnf5-os-
-            ${{ runner.os }}-dnf5-
-
-      # Set up DNF cache directory for buildah to use
-      - name: Set up DNF cache directory
-        run: |
-          sudo mkdir -p /var/cache/dnf5
-          sudo chown -R $(id -u):$(id -g) /var/cache/dnf5
-          # Restore from GitHub Actions cache if it exists
-          if [ -d "/tmp/dnf-cache/dnf5" ]; then
-            echo "Restoring DNF cache from /tmp/dnf-cache/dnf5 to /var/cache/dnf5"
-            sudo cp -rp /tmp/dnf-cache/dnf5/* /var/cache/dnf5/ || true
-            echo "Cache size: $(du -sh /var/cache/dnf5 | cut -f1)"
-          else
-            echo "No existing cache found, starting fresh"
-          fi
-
       # Pre-pull and cache base images in parallel
       - name: Pull and cache base images
         run: |
@@ -458,21 +390,10 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           oci: false
           # Use --target to select which variant to build
-          # Mount DNF cache directory to speed up package downloads
           extra-args: |
             --target=${{ matrix.variant.target }}
-            --volume /var/cache/dnf5:/var/cache/dnf5:z
           build-args: |
             FEDORA_VERSION=42
-
-      # Save DNF cache back to GitHub Actions cache location
-      - name: Save DNF cache
-        if: always()
-        run: |
-          echo "Saving DNF cache from /var/cache/dnf5 to /tmp/dnf-cache"
-          mkdir -p /tmp/dnf-cache
-          sudo cp -rp /var/cache/dnf5 /tmp/dnf-cache/ || true
-          echo "Cache size: $(du -sh /tmp/dnf-cache | cut -f1)"
 
       # Manually save buildah cache with sudo to avoid permission errors
       # The standard actions/cache fails on setuid/shadow files
