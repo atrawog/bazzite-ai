@@ -143,26 +143,28 @@ jobs:
 
       # Unified buildah cache with hierarchical restore keys
       # Allows sharing layers across OS and container builds for maximum efficiency
-      - name: Restore buildah cache tarball
+      # Cache directory directly (no tar) for better performance
+      - name: Restore buildah cache
         uses: actions/cache/restore@v4
         id: buildah-cache
         with:
-          path: /tmp/buildah-cache-staging/buildah-cache.tar.gz
+          path: ~/.local/share/containers
           key: ${{ runner.os }}-buildah-os-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildah-os-
-            ${{ runner.os }}-buildah-containers-
             ${{ runner.os }}-buildah-
 
-      # Extract buildah cache if it was restored
-      - name: Extract buildah cache
-        if: steps.buildah-cache.outputs.cache-hit == 'true'
+      # Verify buildah cache for visibility into cache effectiveness
+      - name: Verify buildah cache
         run: |
-          echo "Extracting buildah cache from tarball"
-          mkdir -p ~/.local/share/containers
-          sudo tar -xzf /tmp/buildah-cache-staging/buildah-cache.tar.gz -C ~/.local/share/containers 2>/dev/null || true
-          sudo chown -R $(id -u):$(id -g) ~/.local/share/containers
-          echo "✓ Buildah cache restored"
+          echo "=== Buildah Storage Info ==="
+          buildah info | grep -A 10 "store:" || true
+          echo ""
+          echo "=== Cached Images ==="
+          buildah images || echo "No images cached"
+          echo ""
+          echo "=== Cache Directory Size ==="
+          du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
 
       - name: Build Image
         id: build_image
@@ -176,28 +178,35 @@ jobs:
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           oci: false
+          layers: true
           build-args: |
             BASE_IMAGE=ghcr.io/${{ env.SOURCE_ORG }}/${{ env.BASE_IMAGE }}:${{ env.IMAGE_SOURCE_TAG || 'latest' }}
             IMAGE_NAME=${{ env.IMAGE_NAME }}
             IMAGE_VENDOR=${{ github.repository_owner }}
 
-      # Manually save buildah cache with sudo to avoid permission errors
-      # The standard actions/cache fails on setuid/shadow files
-      - name: Save buildah cache manually
+      # Show build cache statistics for visibility
+      - name: Show build cache statistics
+        run: |
+          echo "=== Build completed - Cache Statistics ==="
+          buildah images
+          echo ""
+          echo "=== Storage usage ==="
+          du -sh ~/.local/share/containers
+
+      # Prune old buildah layers to prevent cache explosion
+      - name: Prune old buildah layers
         if: always()
         run: |
-          echo "Saving buildah cache manually with sudo"
-          mkdir -p /tmp/buildah-cache-staging
-          sudo tar -czf /tmp/buildah-cache-staging/buildah-cache.tar.gz -C ~/.local/share/containers . 2>/dev/null || true
-          sudo chown $(id -u):$(id -g) /tmp/buildah-cache-staging/buildah-cache.tar.gz
-          echo "Buildah cache size: $(du -sh /tmp/buildah-cache-staging/buildah-cache.tar.gz | cut -f1)"
+          echo "Pruning old buildah layers to prevent cache explosion"
+          buildah prune --all --force || true
+          echo "Cache size after prune: $(du -sh ~/.local/share/containers 2>/dev/null | cut -f1 || echo 'N/A')"
 
-      # Cache the buildah tarball (avoids permission issues)
-      - name: Cache buildah tarball
+      # Save buildah cache directly (no tar needed)
+      - name: Save buildah cache
         uses: actions/cache/save@v4
         if: always()
         with:
-          path: /tmp/buildah-cache-staging/buildah-cache.tar.gz
+          path: ~/.local/share/containers
           key: ${{ runner.os }}-buildah-os-${{ github.sha }}
 
       # Rechunk is a script that we use on Universal Blue to make sure there isnt a single huge layer when your image gets published.
@@ -338,11 +347,11 @@ jobs:
 
       # Unified buildah cache with hierarchical restore keys
       # Both variants share cache for common-base stage and can reuse OS build layers
-      - name: Restore buildah cache tarball
+      - name: Restore buildah cache
         uses: actions/cache/restore@v4
         id: buildah-cache
         with:
-          path: /tmp/buildah-cache-staging/buildah-cache.tar.gz
+          path: ~/.local/share/containers
           key: ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-
@@ -350,15 +359,17 @@ jobs:
             ${{ runner.os }}-buildah-os-
             ${{ runner.os }}-buildah-
 
-      # Extract buildah cache if it was restored
-      - name: Extract buildah cache
-        if: steps.buildah-cache.outputs.cache-hit == 'true'
+      # Verify buildah cache was restored
+      - name: Verify buildah cache
         run: |
-          echo "Extracting buildah cache from tarball"
-          mkdir -p ~/.local/share/containers
-          sudo tar -xzf /tmp/buildah-cache-staging/buildah-cache.tar.gz -C ~/.local/share/containers 2>/dev/null || true
-          sudo chown -R $(id -u):$(id -g) ~/.local/share/containers
-          echo "✓ Buildah cache restored"
+          echo "=== Buildah Storage Info ==="
+          buildah info | grep -A 10 "store:" || true
+          echo ""
+          echo "=== Cached Images ==="
+          buildah images || echo "No images cached"
+          echo ""
+          echo "=== Cache Directory Size ==="
+          du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
 
       - name: Build Container
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2.13
@@ -369,29 +380,36 @@ jobs:
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           oci: false
+          layers: true
           # Use --target to select which variant to build
           extra-args: |
             --target=${{ matrix.variant.target }}
           build-args: |
             FEDORA_VERSION=42
 
-      # Manually save buildah cache with sudo to avoid permission errors
-      # The standard actions/cache fails on setuid/shadow files
-      - name: Save buildah cache manually
+      # Show build cache statistics
+      - name: Show build cache statistics
+        run: |
+          echo "=== Build completed - Cache Statistics ==="
+          buildah images
+          echo ""
+          echo "=== Storage usage ==="
+          du -sh ~/.local/share/containers
+
+      # Prune old buildah layers to prevent cache explosion
+      - name: Prune old buildah layers
         if: always()
         run: |
-          echo "Saving buildah cache manually with sudo"
-          mkdir -p /tmp/buildah-cache-staging
-          sudo tar -czf /tmp/buildah-cache-staging/buildah-cache.tar.gz -C ~/.local/share/containers . 2>/dev/null || true
-          sudo chown $(id -u):$(id -g) /tmp/buildah-cache-staging/buildah-cache.tar.gz
-          echo "Buildah cache size: $(du -sh /tmp/buildah-cache-staging/buildah-cache.tar.gz | cut -f1)"
+          echo "Pruning old buildah layers to prevent cache explosion"
+          buildah prune --all --force || true
+          echo "Cache size after prune: $(du -sh ~/.local/share/containers 2>/dev/null | cut -f1 || echo 'N/A')"
 
-      # Cache the buildah tarball (avoids permission issues)
-      - name: Cache buildah tarball
+      # Save buildah cache directly (no tar overhead)
+      - name: Save buildah cache
         uses: actions/cache/save@v4
         if: always()
         with:
-          path: /tmp/buildah-cache-staging/buildah-cache.tar.gz
+          path: ~/.local/share/containers
           key: ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-${{ github.sha }}
 
       # Monitor disk space (temporary validation that removal is safe)
