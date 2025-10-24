@@ -186,12 +186,14 @@ jobs:
 
       # Show build cache statistics for visibility
       - name: Show build cache statistics
+        if: always()
+        continue-on-error: true
         run: |
           echo "=== Build completed - Cache Statistics ==="
-          buildah images
+          buildah images 2>/dev/null || echo "No buildah images available"
           echo ""
           echo "=== Storage usage ==="
-          du -sh ~/.local/share/containers
+          du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
 
       # Prune old buildah layers to prevent cache explosion
       - name: Prune old buildah layers
@@ -389,12 +391,14 @@ jobs:
 
       # Show build cache statistics
       - name: Show build cache statistics
+        if: always()
+        continue-on-error: true
         run: |
           echo "=== Build completed - Cache Statistics ==="
-          buildah images
+          buildah images 2>/dev/null || echo "No buildah images available"
           echo ""
           echo "=== Storage usage ==="
-          du -sh ~/.local/share/containers
+          du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
 
       # Prune old buildah layers to prevent cache explosion
       - name: Prune old buildah layers
