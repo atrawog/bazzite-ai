@@ -141,6 +141,15 @@ jobs:
           sep-tags: " "
           sep-annotations: " "
 
+      # Login early so buildah can push cache during build
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       # Prepare buildah registry cache configuration
       - name: Prepare buildah registry cache
         id: cache-config
@@ -175,6 +184,20 @@ jobs:
             IMAGE_NAME=${{ env.IMAGE_NAME }}
             IMAGE_VENDOR=${{ github.repository_owner }}
 
+      # Make buildcache package private (main images stay public)
+      - name: Set buildcache package visibility to private
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        continue-on-error: true  # Don't fail if package doesn't exist yet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CACHE_IMAGE="bazzite-ai-buildcache"
+          echo "Setting $CACHE_IMAGE package to private..."
+          gh api --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            "/user/packages/container/${CACHE_IMAGE}" \
+            -f visibility=private || echo "Could not set visibility (package may not exist yet)"
+
       # Rechunk is a script that we use on Universal Blue to make sure there isnt a single huge layer when your image gets published.
       # This does not make your image faster to download, just provides better resumability and fixes a few errors.
       # Documentation for Rechunk is provided on their github repository at https://github.com/hhd-dev/rechunk
@@ -198,16 +221,6 @@ jobs:
       #     for tag in ${{ steps.metadata.outputs.tags }}; do
       #       podman tag $IMAGE ${{ env.IMAGE_NAME }}:$tag
       #     done
-
-      # These `if` statements are so that pull requests for your custom images do not make it publish any packages under your name without you knowing
-      # They also check if the runner is on the default branch so that things like the merge queue (if you enable it), are going to work
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
-        if: github.event_name != 'pull_request'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
@@ -311,6 +324,15 @@ jobs:
           sep-tags: " "
           sep-annotations: " "
 
+      # Login early so buildah can push cache during build
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       # Prepare buildah registry cache configuration
       - name: Prepare buildah registry cache
         id: cache-config
@@ -342,6 +364,20 @@ jobs:
           build-args: |
             FEDORA_VERSION=42
 
+      # Make buildcache package private (main images stay public)
+      - name: Set buildcache package visibility to private
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        continue-on-error: true  # Don't fail if package doesn't exist yet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CACHE_IMAGE="${{ matrix.variant.image }}-buildcache"
+          echo "Setting $CACHE_IMAGE package to private..."
+          gh api --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            "/user/packages/container/${CACHE_IMAGE}" \
+            -f visibility=private || echo "Could not set visibility (package may not exist yet)"
+
       # Monitor disk space (temporary validation that removal is safe)
       - name: Check final disk space
         run: |
@@ -357,14 +393,6 @@ jobs:
           else
             echo "✓ Disk usage is acceptable (<85%)"
           fi
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
-        if: github.event_name != 'pull_request'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Lowercase Image
         id: lowercase
