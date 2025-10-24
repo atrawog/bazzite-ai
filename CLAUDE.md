@@ -24,15 +24,17 @@ Key technologies:
 This is NOT a traditional application repository. It builds bootable container images using:
 
 1. **Base Image**: Starts from `ghcr.io/ublue-os/bazzite-nvidia-open:stable` (unified base)
-2. **Build Process**: Layered Containerfile architecture optimized for build cache efficiency:
-   - **8 separate RUN layers** for granular caching (each script is a separate layer)
-   - **DNF5 cache mounts** on package installation layers prevent re-downloading packages
-   - **Layer caching strategy**: Only rebuilds changed layers + downstream dependencies
-   - Copies `system_files/` (runtime config) and `build_files/` (build scripts) via bind mounts
+2. **Build Process**: Simplified Containerfile architecture optimized for buildah registry cache compatibility:
+   - **Direct file copies** instead of bind mounts (ensures buildah can query external cache)
+   - **9 separate RUN layers** for granular caching (each script is a separate layer)
+   - **No cache mounts** (DNF5, pip) - explicit cleanup within each layer instead
+   - **Layer caching strategy**: Relies purely on buildah's native registry cache
+   - Copies `system_files/` (runtime config) and `build_files/` (build scripts) via COPY commands
    - Executes build scripts directly in separate layers (bypasses build.sh orchestrator)
    - Installs developer tools (VS Code, Docker, Android tools, BPF tools, etc.)
    - Always installs nvidia-container-toolkit for GPU container support
    - Configures system settings and services
+   - Explicit cleanup (`dnf5 clean all && rm -rf /var/cache/dnf5/*`) in package installation scripts
 3. **Output**: Signed container image pushed to GitHub Container Registry
 
 **Build Cache Performance:**
@@ -533,29 +535,23 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 
 GitHub Actions workflow (`.github/workflows/build.yml`):
 1. Checks out code and sets up BTRFS storage
-2. **Build Optimizations (60-70% faster):**
-   - **Two-tier caching system** for maximum performance:
-     - **Buildah Registry Cache**: Remote layer cache stored in GHCR (`ghcr.io/atrawog/bazzite-ai-buildcache`)
-     - **GitHub Actions DNF5 Cache**: Package manager cache persisted across runs (`/tmp/dnf-cache`)
-   - **DNF5 Cache Implementation**:
-     - OS build cache key: `Linux-dnf5-{hash of 20-install-apps.sh}`
-       - Invalidates only when package list changes
-       - Restore keys fallback to `Linux-dnf5-` for partial matches
-     - Container build cache keys: `Linux-dnf5-containers-{variant}-{hash of Containerfile.containers}`
-       - Variant-specific keys (base/nvidia) prevent collisions
-       - Fallback hierarchy: variant → containers → OS build cache → generic
-     - Volume mounts: DNF5 cache mounted into builds via `--volume /tmp/dnf-cache:/var/cache/dnf5:z`
-     - Integrates with Containerfile `--mount=type=cache,target=/var/cache/dnf5` mounts
-   - **Buildah Registry Cache**:
+2. **Build Optimizations:**
+   - **Buildah Registry Cache**: Simplified single-tier caching for maximum compatibility
+     - Remote layer cache stored in GHCR (`ghcr.io/atrawog/bazzite-ai-buildcache`)
      - Separate caches for OS (`bazzite-ai-buildcache`) and containers (`bazzite-ai-container-buildcache`, `bazzite-ai-container-nvidia-buildcache`)
      - Configured via `--cache-from` and `--cache-to` flags
      - Only pushes cache on main branch to save bandwidth
-   - **Performance Gains**:
-     - First build: ~6-8 minutes (populates both caches)
-     - Incremental config changes: **~30-60 seconds** (90% faster)
-     - Incremental package changes: **~4-5 minutes** (40% faster)
-     - Package installation: **~2 minutes** with DNF5 cache (vs 2m41s without, 22% faster)
-       - Note: 10-20s achievable for incremental updates when most packages already installed
+     - No cache mounts or bind mounts - ensures buildah can query external registry cache
+   - **Architecture Philosophy**:
+     - Prioritizes cache compatibility over micro-optimizations
+     - Direct file copies instead of bind mounts
+     - Explicit cleanup (`dnf5 clean all`) within layers instead of cache mounts
+     - Simpler build process = better cache hit rates for RUN commands
+   - **Performance Profile**:
+     - First build: ~6-8 minutes (builds all layers, populates cache)
+     - Incremental config changes: **~30-60 seconds** (when cache works correctly)
+     - Incremental package changes: **~4-5 minutes** (when cache works correctly)
+     - Trade-off: Lose 20-40s from DNF5 cache, gain 5-7 min from proper layer caching
    - **.dockerignore**: Reduces build context size by excluding unnecessary files
 3. Fetches base image version from upstream Bazzite (**using `:stable` tag**)
    - **Why stable, not latest?** Stable tag ensures production-ready builds, better cache reuse (40-60% fewer invalidations), and more predictable behavior

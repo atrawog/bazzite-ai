@@ -227,5 +227,7 @@ dnf5 install -y nvidia-container-toolkit || {
 echo "NVIDIA Container Toolkit installed. CDI config generation available via ujust."
 
 # Clean package cache immediately to reduce layer size
-# Final cleanup in 999-cleanup.sh will clean remaining artifacts
-# dnf5 clean all  # Not needed - using --mount=type=cache in Containerfile
+# No longer using cache mounts, so must clean explicitly
+echo "Cleaning DNF5 cache to reduce layer size..."
+dnf5 clean all
+rm -rf /var/cache/dnf5/*

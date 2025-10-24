@@ -17,8 +17,8 @@ rm -rf /tmp/*
 
 # Cleanup the entirety of `/var`.
 # None of these get in the end-user system and bootc lints get super mad if anything is in there
-# Note: Preserve /var/cache to avoid conflicts with DNF cache mounts in Containerfile
-find /var -mindepth 1 -maxdepth 1 ! -path '/var/cache' -exec rm -rf {} +
+# No longer preserving /var/cache - cleaning everything
+find /var -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 mkdir -p /var
 
 # Commit and lint container
