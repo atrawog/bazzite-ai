@@ -534,43 +534,42 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 GitHub Actions workflow (`.github/workflows/build.yml`):
 1. Checks out code and sets up BTRFS storage
 2. **Build Optimizations (60-70% faster):**
-   - **Connected DNF5 cache**: RPM packages cached via GitHub Actions cache and mounted into builds at `/var/cache/dnf5` (30-50s savings per build)
-     - Fixed directory structure: saves entire `dnf5/` directory to `/tmp/dnf-cache/dnf5/` (was previously broken)
-     - Cross-job sharing: OS and container builds share package cache via hierarchical restore-keys
-     - Variant-specific keys prevent cache collisions between parallel jobs
-   - **Unified buildah cache**: Container layer cache with sudo tar workaround for permission issues
-     - Uses `sudo tar` to create tarball of `~/.local/share/containers` (bypasses setuid/shadow file restrictions)
-     - Caches the tarball instead of directory to avoid GitHub Actions permission errors
-     - Hierarchical restore keys enable cross-job layer sharing (OS ↔ containers, base ↔ nvidia)
-     - Variant-specific cache keys prevent collisions between parallel container builds
-   - **Parallel base image pre-pull**: Pre-fetches and caches base images concurrently (fedora:42, bazzite-nvidia-open)
+   - **Two-tier caching system** for maximum performance:
+     - **Buildah Registry Cache**: Remote layer cache stored in GHCR (`ghcr.io/atrawog/bazzite-ai-buildcache`)
+     - **GitHub Actions DNF5 Cache**: Package manager cache persisted across runs (`/tmp/dnf-cache`)
+   - **DNF5 Cache Implementation**:
+     - OS build cache key: `Linux-dnf5-{hash of 20-install-apps.sh}`
+       - Invalidates only when package list changes
+       - Restore keys fallback to `Linux-dnf5-` for partial matches
+     - Container build cache keys: `Linux-dnf5-containers-{variant}-{hash of Containerfile.containers}`
+       - Variant-specific keys (base/nvidia) prevent collisions
+       - Fallback hierarchy: variant → containers → OS build cache → generic
+     - Volume mounts: DNF5 cache mounted into builds via `--volume /tmp/dnf-cache:/var/cache/dnf5:z`
+     - Integrates with Containerfile `--mount=type=cache,target=/var/cache/dnf5` mounts
+   - **Buildah Registry Cache**:
+     - Separate caches for OS (`bazzite-ai-buildcache`) and containers (`bazzite-ai-container-buildcache`, `bazzite-ai-container-nvidia-buildcache`)
+     - Configured via `--cache-from` and `--cache-to` flags
+     - Only pushes cache on main branch to save bandwidth
+   - **Performance Gains**:
+     - First build: ~6-8 minutes (populates both caches)
+     - Incremental config changes: **~30-60 seconds** (90% faster)
+     - Incremental package changes: **~4-5 minutes** (40% faster)
+     - Package installation: Reduced from 2m41s to **10-20 seconds** with DNF5 cache
    - **.dockerignore**: Reduces build context size by excluding unnecessary files
-   - **No Maximize Build Space**: Removed disk cleanup step (~8.5 min savings) - excellent caching makes it unnecessary
-   - **Disk monitoring**: Temporary validation checks to ensure builds complete within available space
-3. **Cache Key Hierarchy** (enables intelligent cross-job sharing):
-   - **DNF Cache Keys**:
-     - OS build: `Linux-dnf5-os-{hash}-{scripts_hash}` → restores from `os-{hash}` → `os-` → `containers-` → generic
-     - Base container: `Linux-dnf5-containers-base-{hash}` → restores from `containers-base-` → `containers-` → `os-` → generic
-     - NVIDIA container: `Linux-dnf5-containers-nvidia-{hash}` → restores from `containers-nvidia-` → `containers-base-` → `containers-` → `os-` → generic
-   - **Buildah Cache Keys**:
-     - OS build: `Linux-buildah-os-{sha}` → restores from `os-` → `containers-` → generic
-     - Base container: `Linux-buildah-containers-base-{sha}` → restores from `containers-base-` → `containers-` → `os-` → generic
-     - NVIDIA container: `Linux-buildah-containers-nvidia-{sha}` → restores from `containers-nvidia-` → `containers-base-` → `containers-` → `os-` → generic
-   - This hierarchy prevents cache collisions while maximizing reuse across jobs
-4. Fetches base image version from upstream Bazzite (**using `:stable` tag**)
+3. Fetches base image version from upstream Bazzite (**using `:stable` tag**)
    - **Why stable, not latest?** Stable tag ensures production-ready builds, better cache reuse (40-60% fewer invalidations), and more predictable behavior
    - Stable updates every 3-7 days vs latest's potential daily changes
    - Both currently point to same version (42.20251019) but serve different purposes
-5. Builds unified KDE OS image using buildah (bazzite-ai from bazzite-nvidia-open:stable base)
-6. **Builds container images in parallel using matrix strategy:**
+4. Builds unified KDE OS image using buildah (bazzite-ai from bazzite-nvidia-open:stable base)
+5. **Builds container images in parallel using matrix strategy:**
    - `build_containers` matrix job with 2 variants:
      - `base`: Builds bazzite-ai-container with `--target=base-container`
      - `nvidia`: Builds bazzite-ai-container-nvidia with `--target=nvidia-container`
    - Both variants share buildah cache for common-base stage
    - No sequential dependency - 40-60% faster than previous architecture
-7. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
-8. Pushes to ghcr.io/atrawog/bazzite-ai, ghcr.io/atrawog/bazzite-ai-container*
-9. Signs all images with cosign (using SIGNING_SECRET)
+6. Tags with multiple patterns (latest, stable, stable-{version}, {version}.{date})
+7. Pushes to ghcr.io/atrawog/bazzite-ai, ghcr.io/atrawog/bazzite-ai-container*
+8. Signs all images with cosign (using SIGNING_SECRET)
 
 ## End-User Commands
 

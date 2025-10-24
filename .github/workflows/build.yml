@@ -164,6 +164,16 @@ jobs:
             echo "cache-to=" >> $GITHUB_OUTPUT
           fi
 
+      # Restore DNF5 package cache for faster package installations
+      # Cache key based on package list hash - invalidates when packages change
+      - name: Restore DNF5 cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/dnf-cache
+          key: ${{ runner.os }}-dnf5-${{ hashFiles('build_files/20-install-apps.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-dnf5-
+
       - name: Build Image
         id: build_image
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2.13
@@ -178,6 +188,7 @@ jobs:
           oci: false
           layers: true
           extra-args: |
+            --volume /tmp/dnf-cache:/var/cache/dnf5:z
             ${{ steps.cache-config.outputs.cache-from }}
             ${{ steps.cache-config.outputs.cache-to }}
           build-args: |
@@ -312,6 +323,18 @@ jobs:
             echo "cache-to=" >> $GITHUB_OUTPUT
           fi
 
+      # Restore DNF5 package cache for faster package installations
+      # Container builds share cache with OS build for common packages
+      - name: Restore DNF5 cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/dnf-cache
+          key: ${{ runner.os }}-dnf5-containers-${{ matrix.variant.name }}-${{ hashFiles('Containerfile.containers') }}
+          restore-keys: |
+            ${{ runner.os }}-dnf5-containers-${{ matrix.variant.name }}-
+            ${{ runner.os }}-dnf5-containers-
+            ${{ runner.os }}-dnf5-
+
       - name: Build Container
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2.13
         id: build
@@ -324,6 +347,7 @@ jobs:
           layers: true
           # Use --target to select which variant to build
           extra-args: |
+            --volume /tmp/dnf-cache:/var/cache/dnf5:z
             --target=${{ matrix.variant.target }}
             ${{ steps.cache-config.outputs.cache-from }}
             ${{ steps.cache-config.outputs.cache-to }}
