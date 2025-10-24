@@ -169,8 +169,51 @@ install-claude-code:
             echo -e "${bold}Auto-updates:${normal} Enabled by default"
             echo "Claude Code checks for updates on startup"
             echo ""
-            echo -e "${bold}Usage:${normal} claude [command]"
-            echo "Run 'claude --help' for available commands"
+
+            # Add Claude CLI aliases
+            echo "Setting up Claude CLI aliases..."
+            ALIAS_FILE="$HOME/.bash_aliases"
+
+            # Create or update .bash_aliases with Claude aliases
+            if ! grep -q "# Claude CLI aliases" "$ALIAS_FILE" 2>/dev/null; then
+                {
+                    echo ""
+                    echo "# Claude CLI aliases"
+                    echo "alias cl='claude'"
+                    echo "alias clc='claude --continue'"
+                    echo "alias cld='claude --dangerously-skip-permissions'"
+                    echo "alias cldc='claude --dangerously-skip-permissions --continue'"
+                } >> "$ALIAS_FILE"
+
+                # Ensure .bashrc sources .bash_aliases
+                if ! grep -q ".bash_aliases" "$HOME/.bashrc" 2>/dev/null; then
+                    {
+                        echo ""
+                        echo "# Source aliases"
+                        echo "if [ -f ~/.bash_aliases ]; then"
+                        echo "    . ~/.bash_aliases"
+                        echo "fi"
+                    } >> "$HOME/.bashrc"
+                fi
+
+                echo -e "${green}✓ Aliases added to $ALIAS_FILE${normal}"
+            else
+                echo -e "${green}✓ Aliases already configured${normal}"
+            fi
+
+            echo ""
+            echo -e "${bold}Available aliases:${normal}"
+            echo "  cl      → claude"
+            echo "  clc     → claude --continue"
+            echo "  cld     → claude --dangerously-skip-permissions"
+            echo "  cldc    → claude --dangerously-skip-permissions --continue"
+            echo ""
+            echo -e "${yellow}${bold}⚠ Action Required:${normal} Aliases are configured but not yet active in this shell."
+            echo ""
+            echo "To activate aliases immediately, run:"
+            echo -e "${bold}  source ~/.bashrc${normal}"
+            echo ""
+            echo "Or open a new terminal window."
         else
             echo -e "${yellow}${bold}Warning:${normal} Installation completed but 'claude' not in PATH"
             echo "You may need to restart your shell or add ~/.local/bin to PATH"
