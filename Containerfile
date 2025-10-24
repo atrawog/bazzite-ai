@@ -3,14 +3,15 @@
 #
 # Architecture:
 # - Direct file copies instead of bind mounts
-# - 11 separate RUN layers for granular caching (3-layer package split)
+# - 12 separate RUN layers for granular caching (3-layer package split)
 # - No external cache mounts (DNF5, etc.)
 # - Each layer only rebuilds if its source changes
 # - Package installations split by change frequency for optimal caching
+# - System files (ujust, configs) copied LATE to avoid invalidating package cache
 #
 # Expected performance:
 # - First build: ~6-8 minutes (downloads all packages)
-# - Config-only changes: ~30-60 seconds (uses cached 600MB packages)
+# - ujust/config changes: ~30-60 seconds (uses cached 600MB packages) ⚡
 # - External package changes: ~1-2 minutes (uses cached 500MB base packages)
 # - Base package changes: ~3-4 minutes (uses cached 100MB external packages)
 # - Unchanged builds: <1 minute (if cache works)
@@ -22,15 +23,13 @@ FROM ${BASE_IMAGE}
 ARG IMAGE_NAME="${IMAGE_NAME:-bazzite-ai}"
 ARG IMAGE_VENDOR="${IMAGE_VENDOR:-atrawog}"
 
-# Copy all build files and system files upfront
-# This replaces the previous scratch stage + bind mount strategy
+# Copy build scripts early (changes rarely - good caching)
+# System files copied later to avoid invalidating package cache layers
 COPY build_files /tmp/build_files
-COPY system_files /tmp/system_files
 
-# Layer 1: Copy system files to root filesystem
-# Caches as long as system_files/ doesn't change
-RUN mkdir -p /var/roothome && \
-    cp -avf /tmp/system_files/. /
+# Layer 1: Create root home directory
+# Early setup needed before configuration scripts
+RUN mkdir -p /var/roothome
 
 # Layer 2: Set image metadata and info
 # Caches independently of other layers (small, medium frequency)
@@ -68,15 +67,22 @@ RUN /tmp/build_files/os/50-fix-opt.sh
 # Independent caching - only rebuilds if 60-clean-base.sh changes
 RUN /tmp/build_files/os/60-clean-base.sh
 
-# Layer 9: Rebuild initramfs
+# Layer 9: Copy system files to root filesystem (LATE - VOLATILE LAYER)
+# Moved AFTER package installations to prevent cache invalidation
+# Changes to ujust files, configs, etc. now only rebuild from this point forward
+# This avoids reinstalling 600MB of packages when just files change
+COPY system_files /tmp/system_files
+RUN cp -avf /tmp/system_files/. /
+
+# Layer 10: Rebuild initramfs
 # Only rebuilds if 99-build-initramfs.sh changes
 RUN /tmp/build_files/os/99-build-initramfs.sh
 
-# Layer 10: Final cleanup
+# Layer 11: Final cleanup
 # Runs cleanup script
 RUN /tmp/build_files/os/999-cleanup.sh
 
-# Layer 11: Remove build artifacts
+# Layer 12: Remove build artifacts
 # Removes temporary build files from the image
 RUN rm -rf /tmp/build_files /tmp/system_files
 
