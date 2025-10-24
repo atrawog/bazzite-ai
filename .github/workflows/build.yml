@@ -58,9 +58,11 @@ jobs:
         id: dnf-cache
         with:
           path: /tmp/dnf-cache
-          key: ${{ runner.os }}-dnf5-${{ hashFiles('build_files/20-install-apps.sh', 'Containerfile') }}-${{ hashFiles('build_files/**/*.sh') }}
+          key: ${{ runner.os }}-dnf5-os-${{ hashFiles('build_files/20-install-apps.sh', 'Containerfile') }}-${{ hashFiles('build_files/**/*.sh') }}
           restore-keys: |
-            ${{ runner.os }}-dnf5-${{ hashFiles('build_files/20-install-apps.sh', 'Containerfile') }}-
+            ${{ runner.os }}-dnf5-os-${{ hashFiles('build_files/20-install-apps.sh', 'Containerfile') }}-
+            ${{ runner.os }}-dnf5-os-
+            ${{ runner.os }}-dnf5-containers-
             ${{ runner.os }}-dnf5-
 
       # Set up DNF cache directory for buildah to use
@@ -69,9 +71,9 @@ jobs:
           sudo mkdir -p /var/cache/dnf5
           sudo chown -R $(id -u):$(id -g) /var/cache/dnf5
           # Restore from GitHub Actions cache if it exists
-          if [ -d "/tmp/dnf-cache" ] && [ "$(ls -A /tmp/dnf-cache 2>/dev/null)" ]; then
-            echo "Restoring DNF cache from /tmp/dnf-cache to /var/cache/dnf5"
-            sudo cp -rp /tmp/dnf-cache/* /var/cache/dnf5/ || true
+          if [ -d "/tmp/dnf-cache/dnf5" ]; then
+            echo "Restoring DNF cache from /tmp/dnf-cache/dnf5 to /var/cache/dnf5"
+            sudo cp -rp /tmp/dnf-cache/dnf5/* /var/cache/dnf5/ || true
             echo "Cache size: $(du -sh /var/cache/dnf5 | cut -f1)"
           else
             echo "No existing cache found, starting fresh"
@@ -179,15 +181,26 @@ jobs:
 
       # Unified buildah cache with hierarchical restore keys
       # Allows sharing layers across OS and container builds for maximum efficiency
-      - name: Cache buildah layers
-        uses: actions/cache@v4
+      - name: Restore buildah cache tarball
+        uses: actions/cache/restore@v4
+        id: buildah-cache
         with:
-          path: ~/.local/share/containers
+          path: /tmp/buildah-cache-staging/buildah-cache.tar.gz
           key: ${{ runner.os }}-buildah-os-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildah-os-
             ${{ runner.os }}-buildah-containers-
             ${{ runner.os }}-buildah-
+
+      # Extract buildah cache if it was restored
+      - name: Extract buildah cache
+        if: steps.buildah-cache.outputs.cache-hit == 'true'
+        run: |
+          echo "Extracting buildah cache from tarball"
+          mkdir -p ~/.local/share/containers
+          sudo tar -xzf /tmp/buildah-cache-staging/buildah-cache.tar.gz -C ~/.local/share/containers 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) ~/.local/share/containers
+          echo "✓ Buildah cache restored"
 
       - name: Build Image
         id: build_image
@@ -215,8 +228,27 @@ jobs:
         run: |
           echo "Saving DNF cache from /var/cache/dnf5 to /tmp/dnf-cache"
           mkdir -p /tmp/dnf-cache
-          sudo cp -rp /var/cache/dnf5/* /tmp/dnf-cache/ || true
+          sudo cp -rp /var/cache/dnf5 /tmp/dnf-cache/ || true
           echo "Cache size: $(du -sh /tmp/dnf-cache | cut -f1)"
+
+      # Manually save buildah cache with sudo to avoid permission errors
+      # The standard actions/cache fails on setuid/shadow files
+      - name: Save buildah cache manually
+        if: always()
+        run: |
+          echo "Saving buildah cache manually with sudo"
+          mkdir -p /tmp/buildah-cache-staging
+          sudo tar -czf /tmp/buildah-cache-staging/buildah-cache.tar.gz -C ~/.local/share/containers . 2>/dev/null || true
+          sudo chown $(id -u):$(id -g) /tmp/buildah-cache-staging/buildah-cache.tar.gz
+          echo "Buildah cache size: $(du -sh /tmp/buildah-cache-staging/buildah-cache.tar.gz | cut -f1)"
+
+      # Cache the buildah tarball (avoids permission issues)
+      - name: Cache buildah tarball
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: /tmp/buildah-cache-staging/buildah-cache.tar.gz
+          key: ${{ runner.os }}-buildah-os-${{ github.sha }}
 
       # Rechunk is a script that we use on Universal Blue to make sure there isnt a single huge layer when your image gets published.
       # This does not make your image faster to download, just provides better resumability and fixes a few errors.
@@ -331,26 +363,18 @@ jobs:
           df -h / | awk 'NR==2 {print "Root: " $4 " available (" $5 " used)"}'
 
       # Persistent DNF5 cache shared across all builds
-      # Uses unified cache keys to share packages between OS and container builds
+      # Uses variant-specific keys but can restore from other variants
       - name: Cache DNF5 packages
         uses: actions/cache@v4
         id: dnf-cache
         with:
           path: /tmp/dnf-cache
-          key: ${{ runner.os }}-dnf5-containers-${{ hashFiles('Containerfile.containers', 'build_files/devcontainer/**', 'build_files/container-nvidia/**') }}
+          key: ${{ runner.os }}-dnf5-containers-${{ matrix.variant.name }}-${{ hashFiles('Containerfile.containers', 'build_files/devcontainer/**', 'build_files/container-nvidia/**') }}
           restore-keys: |
+            ${{ runner.os }}-dnf5-containers-${{ matrix.variant.name }}-
             ${{ runner.os }}-dnf5-containers-
+            ${{ runner.os }}-dnf5-os-
             ${{ runner.os }}-dnf5-
-
-      # Cache pip packages for NVIDIA variant (TensorRT, cuDNN are large downloads)
-      - name: Cache pip packages
-        if: matrix.variant.name == 'nvidia'
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('build_files/container-nvidia/**') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
       # Set up DNF cache directory for buildah to use
       - name: Set up DNF cache directory
@@ -358,9 +382,9 @@ jobs:
           sudo mkdir -p /var/cache/dnf5
           sudo chown -R $(id -u):$(id -g) /var/cache/dnf5
           # Restore from GitHub Actions cache if it exists
-          if [ -d "/tmp/dnf-cache" ] && [ "$(ls -A /tmp/dnf-cache 2>/dev/null)" ]; then
-            echo "Restoring DNF cache from /tmp/dnf-cache to /var/cache/dnf5"
-            sudo cp -rp /tmp/dnf-cache/* /var/cache/dnf5/ || true
+          if [ -d "/tmp/dnf-cache/dnf5" ]; then
+            echo "Restoring DNF cache from /tmp/dnf-cache/dnf5 to /var/cache/dnf5"
+            sudo cp -rp /tmp/dnf-cache/dnf5/* /var/cache/dnf5/ || true
             echo "Cache size: $(du -sh /var/cache/dnf5 | cut -f1)"
           else
             echo "No existing cache found, starting fresh"
@@ -402,16 +426,27 @@ jobs:
 
       # Unified buildah cache with hierarchical restore keys
       # Both variants share cache for common-base stage and can reuse OS build layers
-      - name: Cache buildah layers
-        uses: actions/cache@v4
+      - name: Restore buildah cache tarball
+        uses: actions/cache/restore@v4
+        id: buildah-cache
         with:
-          path: ~/.local/share/containers
+          path: /tmp/buildah-cache-staging/buildah-cache.tar.gz
           key: ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-
             ${{ runner.os }}-buildah-containers-
             ${{ runner.os }}-buildah-os-
             ${{ runner.os }}-buildah-
+
+      # Extract buildah cache if it was restored
+      - name: Extract buildah cache
+        if: steps.buildah-cache.outputs.cache-hit == 'true'
+        run: |
+          echo "Extracting buildah cache from tarball"
+          mkdir -p ~/.local/share/containers
+          sudo tar -xzf /tmp/buildah-cache-staging/buildah-cache.tar.gz -C ~/.local/share/containers 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) ~/.local/share/containers
+          echo "✓ Buildah cache restored"
 
       - name: Build Container
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2.13
@@ -436,8 +471,27 @@ jobs:
         run: |
           echo "Saving DNF cache from /var/cache/dnf5 to /tmp/dnf-cache"
           mkdir -p /tmp/dnf-cache
-          sudo cp -rp /var/cache/dnf5/* /tmp/dnf-cache/ || true
+          sudo cp -rp /var/cache/dnf5 /tmp/dnf-cache/ || true
           echo "Cache size: $(du -sh /tmp/dnf-cache | cut -f1)"
+
+      # Manually save buildah cache with sudo to avoid permission errors
+      # The standard actions/cache fails on setuid/shadow files
+      - name: Save buildah cache manually
+        if: always()
+        run: |
+          echo "Saving buildah cache manually with sudo"
+          mkdir -p /tmp/buildah-cache-staging
+          sudo tar -czf /tmp/buildah-cache-staging/buildah-cache.tar.gz -C ~/.local/share/containers . 2>/dev/null || true
+          sudo chown $(id -u):$(id -g) /tmp/buildah-cache-staging/buildah-cache.tar.gz
+          echo "Buildah cache size: $(du -sh /tmp/buildah-cache-staging/buildah-cache.tar.gz | cut -f1)"
+
+      # Cache the buildah tarball (avoids permission issues)
+      - name: Cache buildah tarball
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: /tmp/buildah-cache-staging/buildah-cache.tar.gz
+          key: ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-${{ github.sha }}
 
       # Monitor disk space (temporary validation that removal is safe)
       - name: Check final disk space
