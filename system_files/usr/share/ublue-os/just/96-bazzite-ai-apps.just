@@ -17,13 +17,15 @@ install-flatpaks-dev:
     echo -e "${bold}Installing Development Tools Flatpaks${normal}"
     flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-    APPS=("org.flatpak.Builder.BaseApp" "io.podman_desktop.PodmanDesktop" "io.github.dvlv.boxbuddyrs" "io.github.flattool.Warehouse" "it.mijorus.gearlever" "com.github.tchx84.Flatseal" "org.sqlitebrowser.sqlitebrowser" "org.virt_manager.virt-manager")
+    APPS=("org.flatpak.Builder.BaseApp//24.08" "io.podman_desktop.PodmanDesktop" "io.github.dvlv.boxbuddyrs" "io.github.flattool.Warehouse" "it.mijorus.gearlever" "com.github.tchx84.Flatseal" "org.sqlitebrowser.sqlitebrowser" "org.virt_manager.virt-manager")
     for app in "${APPS[@]}"; do
-        if ! flatpak list --columns=application | grep -q "^${app}$"; then
+        # Extract app ID from ref (remove //branch if present)
+        app_id="${app%%//*}"
+        if ! flatpak list --columns=application | grep -q "^${app_id}$"; then
             echo -e "  ${bold}Installing ${app}...${normal}"
             flatpak install --system -y flathub "$app" || echo -e "  ${yellow}⚠ Failed: ${app}${normal}"
         else
-            echo -e "  ${green}✓ ${app}${normal}"
+            echo -e "  ${green}✓ ${app_id}${normal}"
         fi
     done
     echo -e "${green}${bold}Done!${normal}"
@@ -101,13 +103,15 @@ install-flatpaks-productivity:
     echo -e "${bold}Installing Productivity Flatpaks${normal}"
     flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-    APPS=("org.mozilla.firefox" "com.google.Chrome" "org.kde.kcalc" "org.kde.kcolorchooser" "org.kde.filelight" "org.kde.okular" "org.qgis.qgis")
+    APPS=("org.mozilla.firefox" "com.google.Chrome" "org.kde.kcalc" "org.kde.kcolorchooser" "org.kde.filelight" "org.kde.okular" "org.qgis.qgis//stable")
     for app in "${APPS[@]}"; do
-        if ! flatpak list --columns=application | grep -q "^${app}$"; then
+        # Extract app ID from ref (remove //branch if present)
+        app_id="${app%%//*}"
+        if ! flatpak list --columns=application | grep -q "^${app_id}$"; then
             echo -e "  ${bold}Installing ${app}...${normal}"
             flatpak install --system -y flathub "$app" || echo -e "  ${yellow}⚠ Failed: ${app}${normal}"
         else
-            echo -e "  ${green}✓ ${app}${normal}"
+            echo -e "  ${green}✓ ${app_id}${normal}"
         fi
     done
     echo -e "${green}${bold}Done!${normal}"
@@ -156,21 +160,8 @@ install-flatpaks-experimental:
 
 # Install all flatpaks
 [group("apps")]
-install-flatpaks-all:
+install-flatpaks-all: install-flatpaks-dev install-flatpaks-media install-flatpaks-gaming install-flatpaks-communication install-flatpaks-productivity install-flatpaks-utilities install-flatpaks-experimental
     #!/usr/bin/bash
-    set -euo pipefail
     source /usr/lib/ujust/ujust.sh 2>/dev/null || true
-
-    echo -e "${bold}Installing All Flatpaks (38 total)${normal}"
-    echo ""
-
-    just install-flatpaks-dev
-    just install-flatpaks-media
-    just install-flatpaks-gaming
-    just install-flatpaks-communication
-    just install-flatpaks-productivity
-    just install-flatpaks-utilities
-    just install-flatpaks-experimental
-
     echo ""
     echo -e "${green}${bold}✓ All flatpaks installed!${normal}"
