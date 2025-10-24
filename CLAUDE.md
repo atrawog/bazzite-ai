@@ -206,6 +206,302 @@ just release-clean
 
 **Note:** The `releases/` directory containing ISO images and torrents is git-ignored.
 
+## Testing ujust Command Changes Locally
+
+When developing ujust recipes in `system_files/usr/share/ublue-os/just/`, you can test changes locally without rebuilding the entire container image. This dramatically speeds up the development cycle from hours to seconds.
+
+### The Problem
+
+Bazzite AI is an **immutable OS** - the `/usr/` directory is read-only. Changes to justfiles in `system_files/` only take effect after:
+1. Building a new container image (~6-8 minutes)
+2. Pushing to registry
+3. Rebasing system to new image
+4. Rebooting
+
+This workflow is impractical for iterative development.
+
+### Quick Reference
+
+| Method | Speed | Risk | Reboot Required | Best For |
+|--------|-------|------|-----------------|----------|
+| **Test Wrapper** | ⚡ Instant | ✅ None | ❌ No | Quick syntax/logic checks |
+| **rpm-ostree usroverlay** | 🐢 Medium | ⚠️ Low | ✅ Yes (to undo) | Full environment testing |
+| **Symlink Overlay** | 🐢 Medium | ⚠️ Low | ✅ Yes (to undo) | Iterative development |
+| **Direct just -f** | ⚡ Instant | ✅ None | ❌ No | Single recipe testing |
+
+### Method 1: Test Wrapper (Recommended)
+
+**Use when:** You need quick feedback on recipe changes without system modifications.
+
+The test wrapper (`testing/ujust-test`) uses repository justfiles instead of system files.
+
+**Usage:**
+
+```bash
+# List available test recipes
+./testing/ujust-test --list
+
+# Test a specific recipe
+./testing/ujust-test install-devcontainers-cli
+
+# Test with arguments
+./testing/ujust-test --help
+```
+
+**How it works:**
+1. Wrapper script sets `--justfile` to `testing/test-master.justfile`
+2. Test justfile imports recipes from `system_files/usr/share/ublue-os/just/`
+3. Recipes execute using repository code (not system files)
+
+**Pros:**
+- ✅ No system modifications
+- ✅ No reboot required
+- ✅ Safe for experimentation
+- ✅ Instant feedback
+
+**Cons:**
+- ⚠️ May not have full system dependencies (e.g., `/usr/lib/ujust/ujust.sh`)
+- ⚠️ Some recipes might behave differently than in production
+
+**Example:**
+```bash
+# Edit a justfile
+vim system_files/usr/share/ublue-os/just/97-bazzite-ai-dev.just
+
+# Test immediately
+./testing/ujust-test install-devcontainers-cli
+
+# If it works, commit
+git add system_files/usr/share/ublue-os/just/97-bazzite-ai-dev.just
+git commit -m "Fix: devcontainers-cli verification check"
+```
+
+### Method 2: rpm-ostree usroverlay (Full Environment)
+
+**Use when:** You need to test in the actual system environment with all dependencies.
+
+**⚠️ WARNING:** Requires reboot to fully undo, even with `--transient` mode.
+
+**Usage:**
+
+```bash
+# Step 1: Apply usroverlay and copy files (requires root)
+sudo ./testing/apply-usroverlay.sh --transient
+
+# Step 2: Test with real ujust command
+ujust install-devcontainers-cli
+ujust install-dev-tools
+
+# Step 3: Reboot to undo changes
+sudo systemctl reboot
+```
+
+**How it works:**
+1. `rpm-ostree usroverlay --transient` makes `/usr/` temporarily writable
+2. Script backs up original files to `/var/tmp/bazzite-ai-just-backup-*/`
+3. Copies modified justfiles from repository to `/usr/share/ublue-os/just/`
+4. You test with normal `ujust` commands
+5. Reboot restores immutability and reverts changes
+
+**Modes:**
+- `--transient` (default): Changes lost on reboot
+- `--hotfix`: Changes persist across reboots (use with caution)
+
+**Pros:**
+- ✅ Full system integration
+- ✅ Tests with real ujust command
+- ✅ Same environment as production
+- ✅ All dependencies available
+
+**Cons:**
+- ⚠️ Requires root access
+- ⚠️ Requires reboot to fully undo
+- ⚠️ More invasive than wrapper method
+- ⚠️ Automatic backups in `/var/tmp/`
+
+**Safety:**
+- Backups are created automatically before copying files
+- Use `--transient` for testing (changes revert on reboot)
+- Use `--hotfix` only if you understand the implications
+
+### Method 3: Symlink Overlay (Development Workflow)
+
+**Use when:** You're doing iterative development and want live changes.
+
+This combines usroverlay with symlinks for a live-editing workflow.
+
+```bash
+# Step 1: Apply usroverlay
+sudo rpm-ostree usroverlay --transient
+
+# Step 2: Backup and create symlinks manually
+sudo cp /usr/share/ublue-os/just/97-bazzite-ai-dev.just \
+        /var/tmp/97-bazzite-ai-dev.just.backup
+
+sudo ln -sf /var/home/atrawog/Repo/bazzite-ai/bazzite-ai/system_files/usr/share/ublue-os/just/97-bazzite-ai-dev.just \
+            /usr/share/ublue-os/just/97-bazzite-ai-dev.just
+
+# Step 3: Edit in repo, test immediately
+vim system_files/usr/share/ublue-os/just/97-bazzite-ai-dev.just
+ujust install-devcontainers-cli  # Uses live repository file
+
+# Step 4: Reboot when done
+sudo systemctl reboot
+```
+
+**Pros:**
+- ✅ Live editing: changes immediately testable
+- ✅ Full system integration
+- ✅ Best for multiple test iterations
+
+**Cons:**
+- ⚠️ Requires manual symlink creation
+- ⚠️ Requires reboot to undo
+- ⚠️ Easy to forget what's been modified
+
+### Method 4: Direct just Command (Single Recipe)
+
+**Use when:** Testing specific recipe logic in isolation.
+
+```bash
+# Create a standalone test file
+cat > /tmp/test.justfile << 'EOF'
+test-recipe:
+    #!/usr/bin/bash
+    echo "Testing recipe logic..."
+    # Your recipe code here
+EOF
+
+# Test it
+just -f /tmp/test.justfile test-recipe
+```
+
+**Pros:**
+- ✅ Fastest for isolated testing
+- ✅ No system modifications
+- ✅ Good for debugging recipe logic
+
+**Cons:**
+- ⚠️ Doesn't test imports/integration
+- ⚠️ Doesn't test system dependencies
+
+### Real-World Example: Testing devcontainers-cli Fix
+
+This example shows how we used these methods to test the devcontainers-cli fix (commit ba102ca):
+
+**Problem:** `install-devcontainers-cli` showed false "Installation failed" error
+
+**Testing Workflow:**
+
+1. **Initial Discovery** (without testing tools):
+   - Edited `system_files/usr/share/ublue-os/just/97-bazzite-ai-dev.just`
+   - Tried to test → realized system files are immutable
+   - Had to commit and wait for CI build (~8 minutes)
+
+2. **With Test Wrapper** (after creating tools):
+   ```bash
+   # Edit the fix
+   vim system_files/usr/share/ublue-os/just/97-bazzite-ai-dev.just
+
+   # Add: export PATH="$HOME/.npm-global/bin:$PATH" before verification
+
+   # Test immediately
+   ./testing/ujust-test install-devcontainers-cli
+   # ✓ Verified: No syntax errors, logic looks correct
+   ```
+
+3. **With usroverlay** (full validation):
+   ```bash
+   sudo ./testing/apply-usroverlay.sh --transient
+
+   # Test with real environment
+   ujust install-devcontainers-cli
+   # ✓ Verified: Works with actual npm, PATH updates correctly
+
+   # Reboot to clean up
+   sudo systemctl reboot
+   ```
+
+4. **Commit and Deploy:**
+   ```bash
+   git add system_files/usr/share/ublue-os/just/97-bazzite-ai-dev.just
+   git commit -m "Fix: devcontainers-cli false installation error"
+   git push  # Triggers CI/CD
+   ```
+
+**Time Saved:**
+- Without tools: 10+ minutes per iteration (full build + test)
+- With test wrapper: <10 seconds per iteration
+- **Result:** 60x faster development cycle!
+
+### Testing Utilities Location
+
+All testing utilities are in the `testing/` directory:
+
+```
+testing/
+├── ujust-test              # Test wrapper script
+├── test-master.justfile    # Test justfile with imports
+├── apply-usroverlay.sh     # usroverlay helper script
+└── README.md               # Detailed testing documentation
+```
+
+See `testing/README.md` for complete usage instructions and troubleshooting.
+
+### Best Practices
+
+1. **Always test with wrapper first** before using usroverlay
+2. **Use `--transient` mode** for usroverlay testing (safer)
+3. **Commit working changes immediately** before trying usroverlay
+4. **Document your testing process** for future reference
+5. **Verify in full build** before deploying to production
+
+### Common Pitfalls
+
+❌ **Don't:** Edit system files directly with usroverlay without backing up
+✅ **Do:** Use `apply-usroverlay.sh` which creates automatic backups
+
+❌ **Don't:** Use `--hotfix` mode unless you know what you're doing
+✅ **Do:** Use `--transient` mode for testing (changes revert on reboot)
+
+❌ **Don't:** Forget you have usroverlay active
+✅ **Do:** Reboot promptly after testing to restore immutability
+
+❌ **Don't:** Skip wrapper testing and go straight to usroverlay
+✅ **Do:** Test incrementally: wrapper → usroverlay → full build
+
+### Troubleshooting
+
+**Test wrapper says "Could not find source file for import":**
+```bash
+# Check that justfiles exist in repo
+ls -l system_files/usr/share/ublue-os/just/9*.just
+
+# Verify test-master.justfile imports
+cat testing/test-master.justfile | grep import
+```
+
+**usroverlay script fails with "must be run as root":**
+```bash
+# Use sudo
+sudo ./testing/apply-usroverlay.sh --transient
+```
+
+**Changes not taking effect after usroverlay:**
+```bash
+# Verify files were copied
+ls -l /usr/share/ublue-os/just/9*.just
+cat /usr/share/ublue-os/just/97-bazzite-ai-dev.just | grep "export PATH"
+```
+
+**Want to undo usroverlay without rebooting:**
+```bash
+# Restore from backup
+sudo cp /var/tmp/bazzite-ai-just-backup-*/* /usr/share/ublue-os/just/
+
+# Note: Full immutability only restored after reboot
+```
+
 ## Release Management and ISO Distribution
 
 This project includes a comprehensive workflow for building ISO installers and distributing them via BitTorrent (due to GitHub's 2GB file size limit).

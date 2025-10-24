@@ -15,6 +15,11 @@ Thumbs.db
 # Claude Code settings
 .claude/settings.local.json
 
+# Testing utilities artifacts
+testing/*.log
+testing/*.backup
+testing/*.tmp
+
 # Build output directory (all formats)
 output/
 *.manifest.json

@@ -1,0 +1,41 @@
+#!/usr/bin/bash
+# ujust-test - Test wrapper for ujust using repository files
+#
+# This script allows testing ujust recipe changes from the repository
+# without modifying the immutable system or rebuilding the image.
+#
+# Usage:
+#   ./testing/ujust-test <recipe> [args...]
+#   ./testing/ujust-test --list
+#
+# Examples:
+#   ./testing/ujust-test install-devcontainers-cli
+#   ./testing/ujust-test --list
+
+set -euo pipefail
+
+# Get repository root (parent of testing/ directory)
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEST_JUSTFILE="$REPO_ROOT/testing/test-master.justfile"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check if test-master.justfile exists
+if [ ! -f "$TEST_JUSTFILE" ]; then
+    echo -e "${RED}Error:${NC} test-master.justfile not found at: $TEST_JUSTFILE"
+    echo "Run: ./testing/create-test-justfile.sh to generate it"
+    exit 1
+fi
+
+# Display warning on first run
+echo -e "${YELLOW}⚠ Testing Mode:${NC} Using justfiles from repository"
+echo -e "  Repo: ${REPO_ROOT}"
+echo -e "  Justfile: ${TEST_JUSTFILE}"
+echo ""
+
+# Execute just with the test justfile
+exec /usr/bin/just --justfile "$TEST_JUSTFILE" --working-directory "$REPO_ROOT" "${@}"
