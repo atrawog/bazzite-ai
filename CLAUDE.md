@@ -544,8 +544,11 @@ GitHub Actions workflow (`.github/workflows/build.yml`):
      - Base container: `Linux-buildah-containers-base-{sha}` → restores from `containers-base-` → `containers-` → `os-` → generic
      - NVIDIA container: `Linux-buildah-containers-nvidia-{sha}` → restores from `containers-nvidia-` → `containers-base-` → `containers-` → `os-` → generic
    - This hierarchy prevents cache collisions while maximizing reuse across jobs
-4. Fetches base image version from upstream Bazzite
-5. Builds unified KDE OS image using buildah (bazzite-ai from bazzite-nvidia-open base)
+4. Fetches base image version from upstream Bazzite (**using `:stable` tag**)
+   - **Why stable, not latest?** Stable tag ensures production-ready builds, better cache reuse (40-60% fewer invalidations), and more predictable behavior
+   - Stable updates every 3-7 days vs latest's potential daily changes
+   - Both currently point to same version (42.20251019) but serve different purposes
+5. Builds unified KDE OS image using buildah (bazzite-ai from bazzite-nvidia-open:stable base)
 6. **Builds container images in parallel using matrix strategy:**
    - `build_containers` matrix job with 2 variants:
      - `base`: Builds bazzite-ai-container with `--target=base-container`
