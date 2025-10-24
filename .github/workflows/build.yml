@@ -188,28 +188,6 @@ jobs:
       # Note: Buildcache package visibility must be managed manually via GitHub UI
       # Organization packages cannot be set to private via API (limitation of GitHub Packages API)
 
-      # Rechunk splits large layers (like 1.6GB) into smaller chunks for better download resumability
-      # Enabled to fix 1.6GB single-layer issue found in build analysis
-      - name: Run Rechunker
-        id: rechunk
-        uses: hhd-dev/rechunk@f153348d8100c1f504dec435460a0d7baf11a9d2 # v1.1.1
-        with:
-          rechunk: 'ghcr.io/hhd-dev/rechunk:v1.0.1'
-          ref: "${{ env.IMAGE_NAME }}:latest"
-          prev-ref: "${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-          skip_compression: true
-          version: ${{ steps.fetch_source_meta.outputs.SOURCE_VERSION_MAJOR }}
-          labels: ${{ steps.metadata.outputs.labels }} # Rechunk strips out all the labels during build, this needs to be reapplied here with newline separator
-
-      # Load rechunked image into podman storage so it can be pushed
-      - name: Load in podman and tag
-        run: |
-          IMAGE=$(podman pull ${{ steps.rechunk.outputs.ref }})
-          sudo rm -rf ${{ steps.rechunk.outputs.output }}
-          for tag in ${{ steps.metadata.outputs.tags }}; do
-            podman tag $IMAGE ${{ env.IMAGE_NAME }}:$tag
-          done
-
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
       - name: Lowercase Image and Registry
