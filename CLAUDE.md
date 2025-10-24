@@ -554,7 +554,8 @@ GitHub Actions workflow (`.github/workflows/build.yml`):
      - First build: ~6-8 minutes (populates both caches)
      - Incremental config changes: **~30-60 seconds** (90% faster)
      - Incremental package changes: **~4-5 minutes** (40% faster)
-     - Package installation: Reduced from 2m41s to **10-20 seconds** with DNF5 cache
+     - Package installation: **~2 minutes** with DNF5 cache (vs 2m41s without, 22% faster)
+       - Note: 10-20s achievable for incremental updates when most packages already installed
    - **.dockerignore**: Reduces build context size by excluding unnecessary files
 3. Fetches base image version from upstream Bazzite (**using `:stable` tag**)
    - **Why stable, not latest?** Stable tag ensures production-ready builds, better cache reuse (40-60% fewer invalidations), and more predictable behavior
