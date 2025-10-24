@@ -185,18 +185,37 @@ jobs:
             IMAGE_VENDOR=${{ github.repository_owner }}
 
       # Make buildcache package private (main images stay public)
-      - name: Set buildcache package visibility to private
+      # Create manifest tag first so package becomes API-accessible, then set to private
+      - name: Create manifest tag and set buildcache package to private
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        continue-on-error: true  # Don't fail if package doesn't exist yet
+        continue-on-error: true  # Don't fail if skopeo/API fails
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CACHE_IMAGE="bazzite-ai-buildcache"
-          echo "Setting $CACHE_IMAGE package to private..."
-          gh api --method PATCH \
-            -H "Accept: application/vnd.github+json" \
-            "/user/packages/container/${CACHE_IMAGE}" \
-            -f visibility=private || echo "Could not set visibility (package may not exist yet)"
+          CACHE_IMAGE="ghcr.io/atrawog/bazzite-ai-buildcache"
+          PACKAGE_NAME="bazzite-ai-buildcache"
+
+          echo "Creating :cache manifest tag to make package API-accessible..."
+          # Get first digest tag that was pushed
+          FIRST_DIGEST=$(skopeo list-tags docker://${CACHE_IMAGE} 2>/dev/null | jq -r '.Tags[0]' || echo "")
+
+          if [ -n "$FIRST_DIGEST" ]; then
+            echo "Copying digest ${FIRST_DIGEST} to :cache tag..."
+            skopeo copy "docker://${CACHE_IMAGE}:${FIRST_DIGEST}" "docker://${CACHE_IMAGE}:cache" || echo "Could not create manifest tag"
+
+            # Wait for GitHub Package API propagation
+            echo "Waiting 10s for package registration..."
+            sleep 10
+
+            # Now set package to private via API
+            echo "Setting ${PACKAGE_NAME} package to private..."
+            gh api --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/user/packages/container/${PACKAGE_NAME}" \
+              -f visibility=private || echo "Could not set visibility via API (will retry on next build)"
+          else
+            echo "No digest tags found, skipping manifest creation"
+          fi
 
       # Rechunk is a script that we use on Universal Blue to make sure there isnt a single huge layer when your image gets published.
       # This does not make your image faster to download, just provides better resumability and fixes a few errors.
@@ -365,18 +384,37 @@ jobs:
             FEDORA_VERSION=42
 
       # Make buildcache package private (main images stay public)
-      - name: Set buildcache package visibility to private
+      # Create manifest tag first so package becomes API-accessible, then set to private
+      - name: Create manifest tag and set buildcache package to private
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        continue-on-error: true  # Don't fail if package doesn't exist yet
+        continue-on-error: true  # Don't fail if skopeo/API fails
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CACHE_IMAGE="${{ matrix.variant.image }}-buildcache"
-          echo "Setting $CACHE_IMAGE package to private..."
-          gh api --method PATCH \
-            -H "Accept: application/vnd.github+json" \
-            "/user/packages/container/${CACHE_IMAGE}" \
-            -f visibility=private || echo "Could not set visibility (package may not exist yet)"
+          CACHE_IMAGE="ghcr.io/atrawog/${{ matrix.variant.image }}-buildcache"
+          PACKAGE_NAME="${{ matrix.variant.image }}-buildcache"
+
+          echo "Creating :cache manifest tag to make package API-accessible..."
+          # Get first digest tag that was pushed
+          FIRST_DIGEST=$(skopeo list-tags docker://${CACHE_IMAGE} 2>/dev/null | jq -r '.Tags[0]' || echo "")
+
+          if [ -n "$FIRST_DIGEST" ]; then
+            echo "Copying digest ${FIRST_DIGEST} to :cache tag..."
+            skopeo copy "docker://${CACHE_IMAGE}:${FIRST_DIGEST}" "docker://${CACHE_IMAGE}:cache" || echo "Could not create manifest tag"
+
+            # Wait for GitHub Package API propagation
+            echo "Waiting 10s for package registration..."
+            sleep 10
+
+            # Now set package to private via API
+            echo "Setting ${PACKAGE_NAME} package to private..."
+            gh api --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/user/packages/container/${PACKAGE_NAME}" \
+              -f visibility=private || echo "Could not set visibility via API (will retry on next build)"
+          else
+            echo "No digest tags found, skipping manifest creation"
+          fi
 
       # Monitor disk space (temporary validation that removal is safe)
       - name: Check final disk space
