@@ -837,3 +837,286 @@ disable-passwordless-sudo:
     echo "  - polkit service: Restarted"
     echo ""
     echo "Terminal sudo and GUI admin actions now require password."
+
+# Toggle SSH server (sshd.service)
+toggle-sshd ACTION="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    ACTION="{{ ACTION }}"
+    ACTION_LOWER=${ACTION,,}
+    SERVICE="sshd.service"
+
+    # Get current state
+    if systemctl is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        current_enabled="enabled"
+        status_pretty="${green}Enabled${normal}"
+    else
+        current_enabled="disabled"
+        status_pretty="${red}Disabled${normal}"
+    fi
+
+    if systemctl is-active --quiet "$SERVICE" 2>/dev/null; then
+        current_active="active"
+        active_pretty="${green}Running${normal}"
+    else
+        current_active="inactive"
+        active_pretty="${red}Stopped${normal}"
+    fi
+
+    # Handle status display
+    if [[ $ACTION_LOWER == "status" ]]; then
+        echo -e "${bold}SSH Server Status${normal}"
+        echo ""
+        echo -e "Service: ${bold}$SERVICE${normal}"
+        echo -e "Enabled: $status_pretty"
+        echo -e "Active: $active_pretty"
+        echo ""
+        if [[ $current_active == "active" ]]; then
+            echo "Listening on:"
+            ss -tlnp 2>/dev/null | grep ":22 " || echo "  Port 22 (default SSH port)"
+            echo ""
+            echo "Connect from remote host:"
+            echo "  ssh $(whoami)@$(hostname -I | awk '{print $1}')"
+        fi
+        exit 0
+    fi
+
+    # Handle help display
+    if [[ $ACTION_LOWER == "help" ]]; then
+        echo "Usage: ujust toggle-sshd [enable|disable|status|help]"
+        echo "If no action is provided you'll be prompted with a picker."
+        exit 0
+    fi
+
+    # Interactive mode or direct action
+    CHOICE=""
+    if [[ -z $ACTION_LOWER ]]; then
+        echo -e "${bold}SSH Server Configuration${normal}"
+        echo ""
+        echo -e "Current state: $status_pretty (service), $active_pretty (daemon)"
+        echo ""
+        echo "Select action:"
+        echo ""
+        CHOICE=$(ugum choose \
+            "Enable SSH Server" \
+            "Disable SSH Server" \
+            "Exit without changes")
+    else
+        case "$ACTION_LOWER" in
+            enable) CHOICE="Enable SSH Server" ;;
+            disable) CHOICE="Disable SSH Server" ;;
+            *) echo "Unrecognized action: $ACTION" ; exit 1 ;;
+        esac
+    fi
+
+    case "$CHOICE" in
+        "Enable SSH Server")
+            if [[ $current_enabled == "enabled" ]]; then
+                echo "SSH server is already enabled."
+                exit 0
+            fi
+
+            echo ""
+            echo -e "${yellow}⚠️  Security Notice${normal}"
+            echo "Enabling SSH server will:"
+            echo "  - Open port 22 for remote access"
+            echo "  - Allow password authentication by default"
+            echo ""
+            echo "Security recommendations:"
+            echo "  - Use key-based authentication (ssh-keygen)"
+            echo "  - Configure firewall rules"
+            echo "  - Disable password authentication after key setup"
+            echo ""
+            read -p "Continue? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo "Aborted."
+                exit 1
+            fi
+
+            echo "Enabling SSH server..."
+            sudo systemctl enable "$SERVICE"
+            sudo systemctl start "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ SSH server enabled${normal}"
+            echo ""
+            echo "Connect from remote host:"
+            echo "  ssh $(whoami)@$(hostname -I | awk '{print $1}')"
+            ;;
+
+        "Disable SSH Server")
+            if [[ $current_enabled == "disabled" ]]; then
+                echo "SSH server is already disabled."
+                exit 0
+            fi
+
+            echo "Disabling SSH server..."
+            sudo systemctl stop "$SERVICE"
+            sudo systemctl disable "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ SSH server disabled${normal}"
+            echo "Remote SSH access is now unavailable."
+            ;;
+
+        "Exit without changes"|"")
+            echo "No changes made."
+            exit 0
+            ;;
+        *)
+            echo "Unknown selection: $CHOICE" >&2
+            exit 1
+            ;;
+    esac
+
+# Toggle Docker daemon (docker.service)
+toggle-docker ACTION="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    ACTION="{{ ACTION }}"
+    ACTION_LOWER=${ACTION,,}
+    SERVICE="docker.service"
+    SOCKET="docker.socket"
+
+    # Get current state for both service and socket
+    if systemctl is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        service_enabled="enabled"
+        service_status="${green}Enabled${normal}"
+    else
+        service_enabled="disabled"
+        service_status="${red}Disabled${normal}"
+    fi
+
+    if systemctl is-enabled --quiet "$SOCKET" 2>/dev/null; then
+        socket_enabled="enabled"
+        socket_status="${green}Enabled${normal}"
+    else
+        socket_enabled="disabled"
+        socket_status="${red}Disabled${normal}"
+    fi
+
+    if systemctl is-active --quiet "$SERVICE" 2>/dev/null; then
+        service_active="active"
+        service_active_status="${green}Running${normal}"
+    else
+        service_active="inactive"
+        service_active_status="${red}Stopped${normal}"
+    fi
+
+    # Handle status display
+    if [[ $ACTION_LOWER == "status" ]]; then
+        echo -e "${bold}Docker Daemon Status${normal}"
+        echo ""
+        echo -e "Service (always-on): $service_status ($service_active_status)"
+        echo -e "Socket (on-demand): $socket_status"
+        echo ""
+        echo "Activation modes:"
+        echo "  • Socket: Docker starts when first container command runs (efficient)"
+        echo "  • Service: Docker runs continuously (always available)"
+        echo ""
+        if [[ $service_active == "active" ]]; then
+            echo "Docker is running. Check with: docker ps"
+        else
+            echo "Docker daemon is not running."
+            if [[ $socket_enabled == "enabled" ]]; then
+                echo "Socket activation will start it on first use."
+            fi
+        fi
+        echo ""
+        echo "Docker group membership:"
+        if groups | grep -q '\bdocker\b'; then
+            echo -e "  ${green}✓ Current user is in docker group${normal}"
+        else
+            echo -e "  ${yellow}✗ Current user is NOT in docker group${normal}"
+            echo "  Add with: sudo usermod -aG docker $USER"
+            echo "  (requires logout/login to take effect)"
+        fi
+        exit 0
+    fi
+
+    # Handle help display
+    if [[ $ACTION_LOWER == "help" ]]; then
+        echo "Usage: ujust toggle-docker [enable|disable|status|help]"
+        echo "If no action is provided you'll be prompted with a picker."
+        echo ""
+        echo "This controls docker.service (always-on daemon)."
+        echo "docker.socket (on-demand) remains enabled for efficiency."
+        exit 0
+    fi
+
+    # Interactive mode or direct action
+    CHOICE=""
+    if [[ -z $ACTION_LOWER ]]; then
+        echo -e "${bold}Docker Daemon Configuration${normal}"
+        echo ""
+        echo -e "Service (always-on): $service_status"
+        echo -e "Socket (on-demand): $socket_status"
+        echo ""
+        echo "Select action:"
+        echo ""
+        CHOICE=$(ugum choose \
+            "Enable Docker Service (always-on)" \
+            "Disable Docker Service (socket-only)" \
+            "Exit without changes")
+    else
+        case "$ACTION_LOWER" in
+            enable) CHOICE="Enable Docker Service (always-on)" ;;
+            disable) CHOICE="Disable Docker Service (socket-only)" ;;
+            *) echo "Unrecognized action: $ACTION" ; exit 1 ;;
+        esac
+    fi
+
+    case "$CHOICE" in
+        "Enable Docker Service (always-on)")
+            if [[ $service_enabled == "enabled" ]]; then
+                echo "Docker service is already enabled."
+                exit 0
+            fi
+
+            echo "Enabling Docker service (always-on)..."
+            sudo systemctl enable "$SERVICE"
+            sudo systemctl start "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ Docker service enabled${normal}"
+            echo ""
+            echo "Docker daemon will now run continuously."
+            echo "Socket activation ($SOCKET) remains enabled for fallback."
+            echo ""
+            echo "Test with: docker ps"
+            ;;
+
+        "Disable Docker Service (socket-only)")
+            if [[ $service_enabled == "disabled" ]]; then
+                echo "Docker service is already disabled."
+                exit 0
+            fi
+
+            echo ""
+            echo "Disabling Docker service (switching to socket activation only)..."
+            sudo systemctl stop "$SERVICE"
+            sudo systemctl disable "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ Docker service disabled${normal}"
+            echo ""
+            echo "Docker will now use socket activation (starts on-demand)."
+            echo "More efficient for systems that don't use Docker constantly."
+            echo ""
+            echo "Test with: docker ps (will auto-start docker)"
+            ;;
+
+        "Exit without changes"|"")
+            echo "No changes made."
+            exit 0
+            ;;
+        *)
+            echo "Unknown selection: $CHOICE" >&2
+            exit 1
+            ;;
+    esac

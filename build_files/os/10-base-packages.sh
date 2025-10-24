@@ -96,7 +96,8 @@ dnf5 install -y \
     apptainer-suid \
     freerdp \
     freerdp-libs \
-    fastfetch
+    fastfetch \
+    openssh-server
 
 # Clean package cache immediately to reduce layer size
 # No longer using cache mounts, so must clean explicitly

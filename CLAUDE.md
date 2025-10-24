@@ -649,6 +649,12 @@ ujust enable-passwordless-sudo
 
 # Disable passwordless sudo (restore password requirement)
 ujust disable-passwordless-sudo
+
+# Toggle SSH server (enable/disable at boot)
+ujust toggle-sshd [enable|disable|status|help]
+
+# Toggle Docker daemon (always-on vs socket-activated)
+ujust toggle-docker [enable|disable|status|help]
 ```
 
 ## Important Notes
@@ -663,3 +669,5 @@ ujust disable-passwordless-sudo
 - **Release Directory**: `releases/` contains version-specific subdirectories with ISOs, torrents, and checksums. This directory is git-ignored.
 - **BitTorrent Distribution**: ISOs exceed GitHub's 2GB limit, so they're distributed via BitTorrent. The seeding service uses transmission-daemon as a systemd user service.
 - **ISO Build Time**: Each ISO variant takes 30-60 minutes to build. The complete release workflow takes 1-2 hours.
+- **SSH Server**: sshd.service is enabled by default for remote access (port 22). Use `ujust toggle-sshd` to disable.
+- **Docker Daemon**: Both docker.socket (on-demand) and docker.service (always-on) are enabled. Socket activation is more efficient. Use `ujust toggle-docker` to switch modes.
