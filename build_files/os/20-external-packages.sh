@@ -91,19 +91,8 @@ else
     echo "::warning::WinBoat RPM not found, skipping installation..."
 fi
 
-# Install NVIDIA Container Toolkit for GPU-enabled containers
-# Always installed on bazzite-ai (unified variant with NVIDIA support)
-echo "Installing NVIDIA Container Toolkit for GPU container support..."
-
-# Fedora 42 official package: golang-github-nvidia-container-toolkit v1.17.4
-# Fallback to COPR if unavailable
-dnf5 install -y nvidia-container-toolkit || {
-    echo "::info::Falling back to COPR for nvidia-container-toolkit"
-    dnf5 copr enable -y @ai-ml/nvidia-container-toolkit
-    dnf5 install -y nvidia-container-toolkit
-}
-
-echo "NVIDIA Container Toolkit installed. CDI config generation available via ujust."
+# NVIDIA Container Toolkit is pre-installed in base image (bazzite-nvidia-open)
+# No need to install it again - CDI config generation available via ujust
 
 # Clean package cache immediately to reduce layer size
 # No longer using cache mounts, so must clean explicitly

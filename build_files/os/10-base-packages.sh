@@ -44,7 +44,6 @@ dnf5 install -y \
     keepassxc \
     libtool \
     liquidctl \
-    lm_sensors \
     nicstat \
     nodejs20 \
     nodejs20-devel \
