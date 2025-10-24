@@ -195,14 +195,6 @@ jobs:
           echo "=== Storage usage ==="
           du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
 
-      # Prune old buildah layers to prevent cache explosion
-      - name: Prune old buildah layers
-        if: always()
-        run: |
-          echo "Pruning old buildah layers to prevent cache explosion"
-          buildah prune --all --force || true
-          echo "Cache size after prune: $(du -sh ~/.local/share/containers 2>/dev/null | cut -f1 || echo 'N/A')"
-
       # Save buildah cache directly (no tar needed)
       - name: Save buildah cache
         uses: actions/cache/save@v4
@@ -268,6 +260,14 @@ jobs:
           registry: ${{ steps.lowercase.outputs.registry }}
           image: ${{ steps.lowercase.outputs.image }}
           tags: ${{ steps.metadata.outputs.tags }}
+
+      # Clean up dangling layers after successful push
+      - name: Prune dangling buildah layers
+        if: success()
+        run: |
+          echo "Cleaning up dangling layers (keeping all layers from current build)"
+          buildah prune --force || true
+          echo "Cache size after cleanup: $(du -sh ~/.local/share/containers 2>/dev/null | cut -f1 || echo 'N/A')"
 
       # This section is optional and only needs to be enabled if you plan on distributing
       # your project for others to consume. You will need to create a public and private key
@@ -400,14 +400,6 @@ jobs:
           echo "=== Storage usage ==="
           du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
 
-      # Prune old buildah layers to prevent cache explosion
-      - name: Prune old buildah layers
-        if: always()
-        run: |
-          echo "Pruning old buildah layers to prevent cache explosion"
-          buildah prune --all --force || true
-          echo "Cache size after prune: $(du -sh ~/.local/share/containers 2>/dev/null | cut -f1 || echo 'N/A')"
-
       # Save buildah cache directly (no tar overhead)
       - name: Save buildah cache
         uses: actions/cache/save@v4
@@ -454,6 +446,14 @@ jobs:
           registry: ghcr.io/${{ github.repository_owner }}
           image: ${{ steps.lowercase.outputs.image }}
           tags: ${{ steps.metadata.outputs.tags }}
+
+      # Clean up dangling layers after successful push
+      - name: Prune dangling buildah layers
+        if: success()
+        run: |
+          echo "Cleaning up dangling layers (keeping all layers from current build)"
+          buildah prune --force || true
+          echo "Cache size after cleanup: $(du -sh ~/.local/share/containers 2>/dev/null | cut -f1 || echo 'N/A')"
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
