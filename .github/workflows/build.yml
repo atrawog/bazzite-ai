@@ -51,16 +51,6 @@ jobs:
       - name: Mount BTRFS for podman storage
         uses: ublue-os/container-storage-action@main
 
-      # Pre-pull and cache base images for faster builds in parallel
-      - name: Pull and cache base images
-        run: |
-          mkdir -p ~/.local/share/containers/storage
-          # Pull base image for OS build in background for parallelization
-          buildah pull ghcr.io/${{ env.SOURCE_ORG }}/${{ env.BASE_IMAGE }}:${{ env.IMAGE_SOURCE_TAG || 'latest' }} || true &
-          # Wait for all pulls to complete
-          wait
-          echo "✓ Base images pulled and cached"
-
       - name: Get current date
         id: date
         run: |
@@ -321,16 +311,6 @@ jobs:
           df -h
           echo "=== Available Space Summary ==="
           df -h / | awk 'NR==2 {print "Root: " $4 " available (" $5 " used)"}'
-
-      # Pre-pull and cache base images in parallel
-      - name: Pull and cache base images
-        run: |
-          mkdir -p ~/.local/share/containers/storage
-          # Pull Fedora base image for container builds in parallel
-          buildah pull fedora:42 || true &
-          # Wait for all pulls to complete
-          wait
-          echo "✓ Base images pulled successfully"
 
       - name: Get current date
         id: date

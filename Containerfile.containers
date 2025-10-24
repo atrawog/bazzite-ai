@@ -15,7 +15,7 @@ FROM fedora:${FEDORA_VERSION} AS common-minimal
 
 # Install minimal base utilities and Python environment
 RUN --mount=type=tmpfs,dst=/tmp \
-    --mount=type=cache,target=/var/cache/dnf5 \
+    --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
     dnf5 install -y \
     # Core utilities
     curl \
@@ -49,7 +49,7 @@ FROM common-minimal AS devel-additions
 
 # Install comprehensive development toolchain
 RUN --mount=type=tmpfs,dst=/tmp \
-    --mount=type=cache,target=/var/cache/dnf5 \
+    --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
     dnf5 install -y \
     # Core development tools
     alsa-lib-devel \
@@ -92,14 +92,14 @@ RUN --mount=type=tmpfs,dst=/tmp \
         || echo "Some optional packages not available, continuing..."
 
 # VS Code CLI - Import Microsoft GPG key for package verification
-RUN --mount=type=cache,target=/var/cache/dnf5 \
+RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
     rpm --import https://packages.microsoft.com/keys/microsoft.asc || true && \
     dnf5 config-manager addrepo --set=baseurl="https://packages.microsoft.com/yumrepos/vscode" --id="vscode" || true && \
     dnf5 config-manager setopt vscode.enabled=0 vscode.gpgcheck=1 || true && \
     dnf5 install --enable-repo="vscode" -y code || echo "VS Code install skipped"
 
 # Docker CE for container-in-container
-RUN --mount=type=cache,target=/var/cache/dnf5 \
+RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
     dnf5 config-manager addrepo --from-repofile="https://download.docker.com/linux/fedora/docker-ce.repo" || true && \
     dnf5 config-manager setopt docker-ce-stable.enabled=0 || true && \
     dnf5 install -y --enable-repo="docker-ce-stable" \
@@ -148,7 +148,7 @@ RUN dnf5 config-manager addrepo \
     rpm --import https://negativo17.org/repos/RPM-GPG-KEY-slaanesh || true
 
 # Install cuDNN from repository
-RUN --mount=type=cache,target=/var/cache/dnf5 \
+RUN --mount=type=cache,target=/var/cache/dnf5,sharing=locked \
     dnf5 install -y --enable-repo="fedora-multimedia" cuda-cudnn || { \
         echo "::warning::cuDNN not available in repository - using Python wheels..."; \
         pip3 install --root-user-action=ignore nvidia-cudnn-cu12 || \
