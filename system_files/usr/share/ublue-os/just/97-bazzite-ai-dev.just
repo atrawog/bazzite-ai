@@ -191,10 +191,14 @@ install-devcontainers-cli:
     echo "Container development automation tool"
     echo ""
 
-    # Check if already installed
-    if command -v devcontainer &> /dev/null; then
+    # Check if already installed (check both PATH and direct location)
+    if command -v devcontainer &> /dev/null || [ -x "$HOME/.npm-global/bin/devcontainer" ]; then
         echo -e "${green}✓ devcontainer already installed${normal}"
-        devcontainer --version
+        if command -v devcontainer &> /dev/null; then
+            devcontainer --version
+        else
+            "$HOME/.npm-global/bin/devcontainer" --version
+        fi
         echo ""
         echo "To update: npm update -g @devcontainers/cli"
         exit 0
@@ -214,6 +218,9 @@ install-devcontainers-cli:
     # Install devcontainers CLI
     echo "Installing @devcontainers/cli..."
     npm install -g @devcontainers/cli
+
+    # Update PATH in current shell for verification
+    export PATH="$HOME/.npm-global/bin:$PATH"
 
     if command -v devcontainer &> /dev/null; then
         echo ""
