@@ -598,7 +598,14 @@ GitHub Actions workflow (`.github/workflows/build.yml`):
 
 ## End-User Commands
 
-Users of the built image can run these ujust commands (defined in `system_files/usr/share/ublue-os/just/95-bazzite-ai.just`):
+Users of the built image can run these ujust commands. These are organized into 4 category files that integrate with bazzite's command structure:
+
+- **95-bazzite-ai-system.just** - System configuration and service management (`[group("system")]`, `[group("network")]`)
+- **96-bazzite-ai-apps.just** - Application installation (`[group("apps")]`)
+- **97-bazzite-ai-dev.just** - Development tools (`[group("development")]`)
+- **98-bazzite-ai-virt.just** - Virtualization and containers (`[group("virtualization")]`)
+
+Commands appear grouped by function when running `ujust --list`, mixed naturally with bazzite's upstream commands.
 
 ### Flatpak Management (38 total flatpaks)
 ```bash
