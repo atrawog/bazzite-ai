@@ -643,6 +643,12 @@ ujust install-claude-code
 
 # Check Claude Code installation and version
 ujust check-claude-code
+
+# Enable passwordless sudo for wheel group (single-user dev systems only)
+ujust enable-passwordless-sudo
+
+# Disable passwordless sudo (restore password requirement)
+ujust disable-passwordless-sudo
 ```
 
 ## Important Notes

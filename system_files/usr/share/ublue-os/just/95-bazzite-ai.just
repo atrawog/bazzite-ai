@@ -721,3 +721,119 @@ winboat-info:
     echo ""
     echo "Documentation:"
     echo "  https://github.com/TibixDev/winboat"
+
+# Enable passwordless sudo for wheel group
+enable-passwordless-sudo:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Enable Passwordless Sudo${normal}"
+    echo ""
+    echo -e "${yellow}⚠️  WARNING: Security Implications${normal}"
+    echo "This will enable passwordless sudo for all wheel group members."
+    echo ""
+    echo "Effects:"
+    echo "  - Terminal sudo commands will NOT require password"
+    echo "  - GUI admin actions will NOT require password"
+    echo "  - Reduces system security significantly"
+    echo ""
+    echo -e "${bold}Recommended only for:${normal}"
+    echo "  - Single-user development workstations"
+    echo "  - Testing/experimentation environments"
+    echo "  - Systems with physical security"
+    echo ""
+    echo -e "${red}NOT recommended for:${normal}"
+    echo "  - Multi-user systems"
+    echo "  - Production environments"
+    echo "  - Shared workstations"
+    echo ""
+
+    read -p "Continue? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborted."
+        exit 1
+    fi
+
+    echo ""
+    echo "Enabling passwordless sudo..."
+
+    # Verify user is in wheel group
+    if ! groups | grep -q '\bwheel\b'; then
+        echo -e "${red}${bold}Error:${normal} Current user is not in wheel group"
+        echo "Add yourself to wheel: sudo usermod -aG wheel $USER"
+        exit 1
+    fi
+
+    # Modify sudoers to enable NOPASSWD for wheel
+    sudo sed -i -e '/^%wheel\s\+ALL=(ALL)\s\+ALL/s/^/# /' \
+                -e '/^# %wheel\s\+ALL=(ALL)\s\+NOPASSWD: ALL/s/^# //' \
+                /etc/sudoers
+
+    # Create polkit rule for passwordless GUI admin actions
+    echo 'polkit.addRule(function(action, subject) {
+        if (subject.isInGroup("wheel")) {
+            return polkit.Result.YES;
+        }
+    });' | sudo tee /etc/polkit-1/rules.d/10-passwordless-all.rules > /dev/null
+
+    sudo chmod 644 /etc/polkit-1/rules.d/10-passwordless-all.rules
+    sudo chown root:root /etc/polkit-1/rules.d/10-passwordless-all.rules
+
+    # Restart polkit to apply changes
+    sudo systemctl restart polkit
+
+    echo ""
+    echo -e "${green}${bold}✓ Passwordless sudo enabled${normal}"
+    echo ""
+    echo "Changes applied:"
+    echo "  - /etc/sudoers: NOPASSWD enabled for wheel group"
+    echo "  - /etc/polkit-1/rules.d/10-passwordless-all.rules: Created"
+    echo "  - polkit service: Restarted"
+    echo ""
+    echo "To revert: ujust disable-passwordless-sudo"
+
+# Disable passwordless sudo for wheel group
+disable-passwordless-sudo:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Disable Passwordless Sudo${normal}"
+    echo ""
+    echo "This will restore password requirement for sudo commands."
+    echo ""
+
+    read -p "Continue? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborted."
+        exit 1
+    fi
+
+    echo ""
+    echo "Disabling passwordless sudo..."
+
+    # Revert sudoers changes
+    sudo sed -i -e '/^# %wheel\s\+ALL=(ALL)\s\+ALL/s/^# //' \
+                -e '/^%wheel\s\+ALL=(ALL)\s\+NOPASSWD: ALL/s/^/# /' \
+                /etc/sudoers
+
+    # Remove polkit rule
+    if [ -f /etc/polkit-1/rules.d/10-passwordless-all.rules ]; then
+        sudo rm -f /etc/polkit-1/rules.d/10-passwordless-all.rules
+    fi
+
+    # Restart polkit to apply changes
+    sudo systemctl restart polkit
+
+    echo ""
+    echo -e "${green}${bold}✓ Passwordless sudo disabled${normal}"
+    echo ""
+    echo "Changes applied:"
+    echo "  - /etc/sudoers: Password required for wheel group"
+    echo "  - /etc/polkit-1/rules.d/10-passwordless-all.rules: Removed"
+    echo "  - polkit service: Restarted"
+    echo ""
+    echo "Terminal sudo and GUI admin actions now require password."
