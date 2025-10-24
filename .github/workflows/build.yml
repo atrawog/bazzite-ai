@@ -141,30 +141,18 @@ jobs:
           sep-tags: " "
           sep-annotations: " "
 
-      # Unified buildah cache with hierarchical restore keys
-      # Allows sharing layers across OS and container builds for maximum efficiency
-      # Cache directory directly (no tar) for better performance
-      - name: Restore buildah cache
-        uses: actions/cache/restore@v4
-        id: buildah-cache
-        with:
-          path: ~/.local/share/containers
-          key: ${{ runner.os }}-buildah-os-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildah-os-
-            ${{ runner.os }}-buildah-
-
-      # Verify buildah cache for visibility into cache effectiveness
-      - name: Verify buildah cache
+      # Prepare buildah registry cache configuration
+      - name: Prepare buildah registry cache
+        id: cache-config
         run: |
-          echo "=== Buildah Storage Info ==="
-          buildah info | grep -A 10 "store:" || true
-          echo ""
-          echo "=== Cached Images ==="
-          buildah images || echo "No images cached"
-          echo ""
-          echo "=== Cache Directory Size ==="
-          du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
+          CACHE_IMAGE="ghcr.io/${{ github.repository_owner }}/bazzite-ai-buildcache"
+          echo "cache-from=--cache-from=${CACHE_IMAGE}" >> $GITHUB_OUTPUT
+          # Only push cache on main branch to save bandwidth/storage
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "cache-to=--cache-to=${CACHE_IMAGE}" >> $GITHUB_OUTPUT
+          else
+            echo "cache-to=" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build Image
         id: build_image
@@ -179,29 +167,13 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           oci: false
           layers: true
+          extra-args: |
+            ${{ steps.cache-config.outputs.cache-from }}
+            ${{ steps.cache-config.outputs.cache-to }}
           build-args: |
             BASE_IMAGE=ghcr.io/${{ env.SOURCE_ORG }}/${{ env.BASE_IMAGE }}:${{ env.IMAGE_SOURCE_TAG || 'latest' }}
             IMAGE_NAME=${{ env.IMAGE_NAME }}
             IMAGE_VENDOR=${{ github.repository_owner }}
-
-      # Show build cache statistics for visibility
-      - name: Show build cache statistics
-        if: always()
-        continue-on-error: true
-        run: |
-          echo "=== Build completed - Cache Statistics ==="
-          buildah images 2>/dev/null || echo "No buildah images available"
-          echo ""
-          echo "=== Storage usage ==="
-          du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
-
-      # Save buildah cache directly (no tar needed)
-      - name: Save buildah cache
-        uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: ~/.local/share/containers
-          key: ${{ runner.os }}-buildah-os-${{ github.sha }}
 
       # Rechunk is a script that we use on Universal Blue to make sure there isnt a single huge layer when your image gets published.
       # This does not make your image faster to download, just provides better resumability and fixes a few errors.
@@ -260,14 +232,6 @@ jobs:
           registry: ${{ steps.lowercase.outputs.registry }}
           image: ${{ steps.lowercase.outputs.image }}
           tags: ${{ steps.metadata.outputs.tags }}
-
-      # Clean up dangling layers after successful push
-      - name: Prune dangling buildah layers
-        if: success()
-        run: |
-          echo "Cleaning up dangling layers (keeping all layers from current build)"
-          buildah prune --force || true
-          echo "Cache size after cleanup: $(du -sh ~/.local/share/containers 2>/dev/null | cut -f1 || echo 'N/A')"
 
       # This section is optional and only needs to be enabled if you plan on distributing
       # your project for others to consume. You will need to create a public and private key
@@ -347,31 +311,18 @@ jobs:
           sep-tags: " "
           sep-annotations: " "
 
-      # Unified buildah cache with hierarchical restore keys
-      # Both variants share cache for common-base stage and can reuse OS build layers
-      - name: Restore buildah cache
-        uses: actions/cache/restore@v4
-        id: buildah-cache
-        with:
-          path: ~/.local/share/containers
-          key: ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-
-            ${{ runner.os }}-buildah-containers-
-            ${{ runner.os }}-buildah-os-
-            ${{ runner.os }}-buildah-
-
-      # Verify buildah cache was restored
-      - name: Verify buildah cache
+      # Prepare buildah registry cache configuration
+      - name: Prepare buildah registry cache
+        id: cache-config
         run: |
-          echo "=== Buildah Storage Info ==="
-          buildah info | grep -A 10 "store:" || true
-          echo ""
-          echo "=== Cached Images ==="
-          buildah images || echo "No images cached"
-          echo ""
-          echo "=== Cache Directory Size ==="
-          du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
+          CACHE_IMAGE="ghcr.io/${{ github.repository_owner }}/${{ matrix.variant.image }}-buildcache"
+          echo "cache-from=--cache-from=${CACHE_IMAGE}" >> $GITHUB_OUTPUT
+          # Only push cache on main branch to save bandwidth/storage
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "cache-to=--cache-to=${CACHE_IMAGE}" >> $GITHUB_OUTPUT
+          else
+            echo "cache-to=" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build Container
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2.13
@@ -386,27 +337,10 @@ jobs:
           # Use --target to select which variant to build
           extra-args: |
             --target=${{ matrix.variant.target }}
+            ${{ steps.cache-config.outputs.cache-from }}
+            ${{ steps.cache-config.outputs.cache-to }}
           build-args: |
             FEDORA_VERSION=42
-
-      # Show build cache statistics
-      - name: Show build cache statistics
-        if: always()
-        continue-on-error: true
-        run: |
-          echo "=== Build completed - Cache Statistics ==="
-          buildah images 2>/dev/null || echo "No buildah images available"
-          echo ""
-          echo "=== Storage usage ==="
-          du -sh ~/.local/share/containers 2>/dev/null || echo "No cache directory"
-
-      # Save buildah cache directly (no tar overhead)
-      - name: Save buildah cache
-        uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: ~/.local/share/containers
-          key: ${{ runner.os }}-buildah-containers-${{ matrix.variant.name }}-${{ github.sha }}
 
       # Monitor disk space (temporary validation that removal is safe)
       - name: Check final disk space
@@ -446,14 +380,6 @@ jobs:
           registry: ghcr.io/${{ github.repository_owner }}
           image: ${{ steps.lowercase.outputs.image }}
           tags: ${{ steps.metadata.outputs.tags }}
-
-      # Clean up dangling layers after successful push
-      - name: Prune dangling buildah layers
-        if: success()
-        run: |
-          echo "Cleaning up dangling layers (keeping all layers from current build)"
-          buildah prune --force || true
-          echo "Cache size after cleanup: $(du -sh ~/.local/share/containers 2>/dev/null | cut -f1 || echo 'N/A')"
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
