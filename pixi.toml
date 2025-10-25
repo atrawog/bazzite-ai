@@ -1,0 +1,27 @@
+[workspace]
+name = "bazzite-ai-docs"
+version = "0.1.0"
+description = "Bazzite AI Documentation"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.11,<3.12"
+jupyter-book = ">=1.0.0"
+myst-parser = ">=2.0.0"
+pydata-sphinx-theme = ">=0.15.0"
+sphinx = ">=7.0.0"
+sphinx-design = ">=0.5.0"
+sphinx-copybutton = ">=0.5.0"
+sphinx-sitemap = ">=2.5.0"
+sphinx-autobuild = ">=2024.0.0"
+sphinx-tabs = ">=3.4.0"
+sphinxcontrib-mermaid = ">=0.9"
+
+[tasks]
+# Documentation tasks that can be run with 'pixi run <task>'
+docs-install = "echo '✓ Dependencies already managed by pixi'"
+docs-build = "cd docs && jupyter-book build ."
+docs-serve = "cd docs && sphinx-autobuild . _build/html --port 8000 --open-browser"
+docs-clean = "cd docs && rm -rf _build .jupyter_cache"
+docs-rebuild = { depends-on = ["docs-clean", "docs-build"] }

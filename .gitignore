@@ -56,3 +56,6 @@ venv/
 *.pyc
 __pycache__/
 
+# Pixi environment (pixi.lock is committed for reproducibility)
+.pixi/
+
