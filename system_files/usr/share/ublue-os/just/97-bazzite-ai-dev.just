@@ -500,19 +500,19 @@ toggle-lmstudio-gui ACTION="":
 
             # Create service file
             cat > "$HOME/.config/systemd/user/$SERVICE" <<'EOF'
-[Unit]
-Description=LM Studio GUI
-After=network.target
+            [Unit]
+            Description=LM Studio GUI
+            After=network.target
 
-[Service]
-Type=simple
-ExecStart=%h/.local/bin/lmstudio/LM_Studio.AppImage --no-sandbox
-Restart=on-failure
-RestartSec=10s
+            [Service]
+            Type=simple
+            ExecStart=%h/.local/bin/lmstudio/LM_Studio.AppImage --no-sandbox
+            Restart=on-failure
+            RestartSec=10s
 
-[Install]
-WantedBy=default.target
-EOF
+            [Install]
+            WantedBy=default.target
+            EOF
 
             echo "Enabling LM Studio GUI service..."
             systemctl --user daemon-reload
@@ -689,20 +689,20 @@ toggle-lmstudio-server ACTION="":
 
             # Create service file
             cat > "$HOME/.config/systemd/user/$SERVICE" <<'EOF'
-[Unit]
-Description=LM Studio Server
-After=network.target
+            [Unit]
+            Description=LM Studio Server
+            After=network.target
 
-[Service]
-Type=simple
-Environment="PATH=%h/.lmstudio/bin:%h/.local/bin:/usr/local/bin:/usr/bin"
-ExecStart=%h/.lmstudio/bin/lms server start --port 1234
-Restart=on-failure
-RestartSec=10s
+            [Service]
+            Type=simple
+            Environment="PATH=%h/.lmstudio/bin:%h/.local/bin:/usr/local/bin:/usr/bin"
+            ExecStart=%h/.lmstudio/bin/lms server start --port 1234
+            Restart=on-failure
+            RestartSec=10s
 
-[Install]
-WantedBy=default.target
-EOF
+            [Install]
+            WantedBy=default.target
+            EOF
 
             echo "Enabling LM Studio Server service..."
             systemctl --user daemon-reload
@@ -1038,21 +1038,21 @@ toggle-ollama ACTION="":
 
             # Create service file
             cat > "$HOME/.config/systemd/user/$SERVICE" <<'EOF'
-[Unit]
-Description=Ollama Service
-After=network.target
+            [Unit]
+            Description=Ollama Service
+            After=network.target
 
-[Service]
-Type=simple
-Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
-Environment="LD_LIBRARY_PATH=%h/.local/lib/ollama"
-ExecStart=%h/.local/bin/ollama serve
-Restart=on-failure
-RestartSec=10s
+            [Service]
+            Type=simple
+            Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
+            Environment="LD_LIBRARY_PATH=%h/.local/lib/ollama"
+            ExecStart=%h/.local/bin/ollama serve
+            Restart=on-failure
+            RestartSec=10s
 
-[Install]
-WantedBy=default.target
-EOF
+            [Install]
+            WantedBy=default.target
+            EOF
 
             echo "Enabling Ollama Server service..."
             systemctl --user daemon-reload
@@ -1183,21 +1183,21 @@ install-comfyui:
 
     # Create pixi.toml
     cat > "$INSTALL_DIR/pixi.toml" <<EOF
-[project]
-name = "comfyui"
-channels = ["conda-forge"]
-platforms = ["linux-64"]
+    [project]
+    name = "comfyui"
+    channels = ["conda-forge"]
+    platforms = ["linux-64"]
 
-[dependencies]
-python = ">=3.12,<3.14"
-pip = "*"
+    [dependencies]
+    python = ">=3.12,<3.14"
+    pip = "*"
 
-[tasks]
-# Run ComfyUI server
-serve = "python main.py --listen 127.0.0.1 --port 8188"
-# Run ComfyUI with custom arguments
-run = { cmd = "python main.py" }
-EOF
+    [tasks]
+    # Run ComfyUI server
+    serve = "python main.py --listen 127.0.0.1 --port 8188"
+    # Run ComfyUI with custom arguments
+    run = { cmd = "python main.py" }
+    EOF
 
     echo ""
     echo "Installing Python dependencies (this may take 2-3 minutes)..."
@@ -1458,21 +1458,21 @@ toggle-comfyui ACTION="":
 
             # Create service file
             cat > "$HOME/.config/systemd/user/$SERVICE" <<'EOF'
-[Unit]
-Description=ComfyUI Stable Diffusion GUI
-After=network.target
+            [Unit]
+            Description=ComfyUI Stable Diffusion GUI
+            After=network.target
 
-[Service]
-Type=simple
-WorkingDirectory=%h/.comfyui
-Environment="PATH=%h/.pixi/bin:%h/.local/bin:/usr/local/bin:/usr/bin"
-ExecStart=%h/.pixi/bin/pixi run python main.py --listen 127.0.0.1 --port 8188
-Restart=on-failure
-RestartSec=10s
+            [Service]
+            Type=simple
+            WorkingDirectory=%h/.comfyui
+            Environment="PATH=%h/.pixi/bin:%h/.local/bin:/usr/local/bin:/usr/bin"
+            ExecStart=%h/.pixi/bin/pixi run python main.py --listen 127.0.0.1 --port 8188
+            Restart=on-failure
+            RestartSec=10s
 
-[Install]
-WantedBy=default.target
-EOF
+            [Install]
+            WantedBy=default.target
+            EOF
 
             echo "Enabling ComfyUI Server service..."
             systemctl --user daemon-reload
