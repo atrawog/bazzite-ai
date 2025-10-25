@@ -1579,6 +1579,9 @@ ujust toggle-docker [enable|disable|status|help]
 
 # Toggle Syncthing user service (enable/disable at boot)
 ujust toggle-syncthing [enable|disable|status|help]
+
+# Toggle libvirtd virtualization service (enabled by default)
+ujust toggle-libvirtd [enable|disable|status|help]
 ```
 
 ## Important Notes
@@ -1595,4 +1598,5 @@ ujust toggle-syncthing [enable|disable|status|help]
 - **ISO Build Time**: Each ISO variant takes 30-60 minutes to build. The complete release workflow takes 1-2 hours.
 - **SSH Server**: sshd.service is enabled by default for remote access (port 22). Use `ujust toggle-sshd` to disable.
 - **Docker Daemon**: Both docker.socket (on-demand) and docker.service (always-on) are enabled. Socket activation is more efficient. Use `ujust toggle-docker` to switch modes.
+- **Virtualization**: libvirtd.service enabled by default, virt-manager pre-installed, users auto-added to libvirt group for sudo-free VM management. KVM kernel args (kvm.ignore_msrs=1, kvm.report_ignored_msrs=0) added on first boot (requires reboot). Use `ujust toggle-libvirtd` to manage. Advanced GPU passthrough available via upstream `ujust setup-virtualization`.
 - **Documentation**: ALL .md files MUST be created in `docs/` directory using MyST Markdown syntax (exceptions: README.md, CLAUDE.md). Documentation auto-deploys to GitHub Pages on every push. See "Documentation System" section for details.

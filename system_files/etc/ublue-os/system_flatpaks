@@ -27,6 +27,7 @@ org.kde.krita
 org.kde.okular
 org.libreoffice.LibreOffice
 org.localsend.localsend_app
+org.virt_manager.virt-manager
 org.qbittorrent.qBittorrent
 org.signal.Signal
 org.telegram.desktop

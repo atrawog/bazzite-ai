@@ -1,5 +1,150 @@
 # vim: set ft=make :
 
+# Toggle libvirtd virtualization service
+[group("virtualization")]
+toggle-libvirtd ACTION="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    ACTION="{{ ACTION }}"
+    ACTION_LOWER=${ACTION,,}
+    SERVICE="libvirtd.service"
+
+    # Get current state
+    if systemctl is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        current_enabled="enabled"
+        status_pretty="${green}Enabled${normal}"
+    else
+        current_enabled="disabled"
+        status_pretty="${red}Disabled${normal}"
+    fi
+
+    if systemctl is-active --quiet "$SERVICE" 2>/dev/null; then
+        current_active="active"
+        active_pretty="${green}Running${normal}"
+    else
+        current_active="inactive"
+        active_pretty="${red}Stopped${normal}"
+    fi
+
+    # Check KVM kernel args
+    KARGS=$(rpm-ostree kargs 2>/dev/null || echo "")
+    if echo "$KARGS" | grep -q "kvm.ignore_msrs"; then
+        kvm_args_status="${green}Enabled${normal}"
+    else
+        kvm_args_status="${yellow}Not configured${normal}"
+    fi
+
+    # Check libvirt group membership
+    if groups | grep -q '\blibvirt\b'; then
+        group_status="${green}Yes${normal}"
+    else
+        group_status="${yellow}No${normal}"
+    fi
+
+    # Handle status display
+    if [[ $ACTION_LOWER == "status" ]]; then
+        echo -e "${bold}Virtualization Status${normal}"
+        echo ""
+        echo -e "Libvirtd Service: $status_pretty ($active_pretty)"
+        echo -e "KVM Kernel Args: $kvm_args_status"
+        echo -e "User in libvirt group: $group_status"
+        echo ""
+        if [[ $current_active == "active" ]]; then
+            echo "Virtual machines can be managed via virt-manager."
+        fi
+        if [[ $group_status == *"No"* ]]; then
+            echo -e "${yellow}⚠️  Not in libvirt group - sudo required for VM management${normal}"
+            echo "Logout/login or reboot to apply group changes."
+        fi
+        exit 0
+    fi
+
+    # Handle help display
+    if [[ $ACTION_LOWER == "help" ]]; then
+        echo "Usage: ujust toggle-libvirtd [enable|disable|status|help]"
+        echo "Control the libvirtd virtualization service."
+        echo ""
+        echo "Examples:"
+        echo "  ujust toggle-libvirtd status   # Show current status"
+        echo "  ujust toggle-libvirtd enable   # Enable libvirtd"
+        echo "  ujust toggle-libvirtd disable  # Disable libvirtd"
+        exit 0
+    fi
+
+    # Interactive mode or direct action
+    CHOICE=""
+    if [[ -z $ACTION_LOWER ]]; then
+        echo -e "${bold}Libvirtd Virtualization Service${normal}"
+        echo ""
+        echo -e "Current state: $status_pretty (service), $active_pretty (daemon)"
+        echo -e "KVM kernel args: $kvm_args_status"
+        echo ""
+        CHOICE=$(ugum choose \
+            "Enable Libvirtd" \
+            "Disable Libvirtd" \
+            "Exit without changes")
+    else
+        case "$ACTION_LOWER" in
+            enable) CHOICE="Enable Libvirtd" ;;
+            disable) CHOICE="Disable Libvirtd" ;;
+            *) echo "Unrecognized action: $ACTION" ; exit 1 ;;
+        esac
+    fi
+
+    case "$CHOICE" in
+        "Enable Libvirtd")
+            if [[ $current_enabled == "enabled" ]]; then
+                echo "Libvirtd is already enabled."
+                exit 0
+            fi
+
+            echo "Enabling libvirtd service..."
+            sudo systemctl enable "$SERVICE"
+            sudo systemctl start "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ Libvirtd enabled${normal}"
+            echo ""
+            echo "You can now create virtual machines using virt-manager."
+            ;;
+
+        "Disable Libvirtd")
+            if [[ $current_enabled == "disabled" ]]; then
+                echo "Libvirtd is already disabled."
+                exit 0
+            fi
+
+            echo ""
+            echo -e "${yellow}⚠️  Warning${normal}"
+            echo "Disabling libvirtd will stop all running VMs."
+            echo ""
+            read -p "Continue? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo "Aborted."
+                exit 1
+            fi
+
+            echo "Disabling libvirtd service..."
+            sudo systemctl stop "$SERVICE"
+            sudo systemctl disable "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ Libvirtd disabled${normal}"
+            ;;
+
+        "Exit without changes"|"")
+            echo "No changes made."
+            exit 0
+            ;;
+        *)
+            echo "Unknown selection: $CHOICE" >&2
+            exit 1
+            ;;
+    esac
+
 # Pull bazzite-ai-container-nvidia using Apptainer
 [group("virtualization")]
 apptainer-pull-container-nvidia tag="latest":

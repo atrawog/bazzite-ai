@@ -36,6 +36,8 @@ project:
               title: GPU Setup
         - file: user-guide/winboat.md
           title: Windows Apps (WinBoat)
+        - file: user-guide/virtualization.md
+          title: Virtualization
     - file: developer-guide/index.md
       title: Developer Guide
       children:

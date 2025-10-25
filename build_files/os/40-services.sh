@@ -8,6 +8,12 @@ systemctl enable podman.socket
 # SSH server - enabled at boot for remote access
 systemctl enable sshd.service
 
+# Virtualization - libvirtd for VM management
+systemctl enable libvirtd.service
+
+# KVM kernel args setup (runs once on first boot, requires reboot)
+systemctl enable bazzite-ai-kvm-setup.service
+
 # Docker daemon - always-on option (in addition to docker.socket)
 # Users can choose between socket activation and always-on via ujust toggle-docker
 systemctl enable docker.service

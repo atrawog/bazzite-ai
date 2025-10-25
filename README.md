@@ -284,6 +284,46 @@ winboat
 
 See [WinBoat Documentation](https://github.com/TibixDev/winboat) for details.
 
+## Virtualization
+
+Bazzite AI includes comprehensive virtualization support pre-configured and ready to use:
+
+### What's Included
+
+- ✅ **libvirtd service** - Enabled at boot for VM management
+- ✅ **virt-manager** - Pre-installed GUI for creating and managing VMs
+- ✅ **QEMU/KVM** - Full hardware virtualization support
+- ✅ **libvirt group** - Users auto-added for sudo-free VM management
+- ✅ **KVM kernel args** - Automatically added on first boot for optimal VM compatibility
+
+### Quick Start
+
+```bash
+# Check virtualization status
+ujust toggle-libvirtd status
+
+# Open virt-manager from application menu
+# Create VMs without any additional setup required
+```
+
+### KVM Kernel Arguments
+
+On first boot, Bazzite AI automatically adds kernel arguments for better VM compatibility:
+- `kvm.ignore_msrs=1` - Allows VMs to ignore unsupported CPU registers
+- `kvm.report_ignored_msrs=0` - Reduces kernel log spam
+
+A reboot is required after first boot for these args to take effect.
+
+### Advanced Features
+
+For GPU passthrough, Looking Glass, or VFIO:
+
+```bash
+ujust setup-virtualization help
+```
+
+See the [Virtualization Guide](https://atrawog.github.io/bazzite-ai/user-guide/virtualization.html) for complete documentation.
+
 ## Acknowledgments
 
 This project is built upon the work from [amyos](https://github.com/astrovm/amyos)

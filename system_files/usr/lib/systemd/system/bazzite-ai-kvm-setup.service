@@ -1,0 +1,19 @@
+[Unit]
+Description=Configure KVM kernel arguments for virtualization
+After=rpm-ostreed.service
+Before=systemd-user-sessions.service
+ConditionKernelCommandLine=!kvm.ignore_msrs
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash -c '\
+    echo "Adding KVM kernel arguments for better VM compatibility..."; \
+    rpm-ostree kargs \
+      --append-if-missing="kvm.ignore_msrs=1" \
+      --append-if-missing="kvm.report_ignored_msrs=0"; \
+    echo "KVM kernel arguments added. Reboot required for changes to take effect."; \
+    echo "After reboot, virtualization will have optimal compatibility settings."; \
+    systemctl disable bazzite-ai-kvm-setup.service'
+
+[Install]
+WantedBy=multi-user.target
