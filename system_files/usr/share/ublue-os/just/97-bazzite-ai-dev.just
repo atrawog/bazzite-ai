@@ -1113,6 +1113,428 @@ EOF
             ;;
     esac
 
+# Install ComfyUI (Stable Diffusion GUI)
+[group("development")]
+install-comfyui:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing ComfyUI${normal}"
+    echo "Stable Diffusion GUI with node-based workflow"
+    echo ""
+
+    # Check if pixi is installed
+    if ! command -v pixi &> /dev/null; then
+        echo -e "${red}${bold}✗ Error:${normal} pixi not found"
+        echo ""
+        echo "ComfyUI requires pixi for environment management."
+        echo "Install with: ujust install-pixi"
+        exit 1
+    fi
+
+    INSTALL_DIR="$HOME/.comfyui"
+
+    # Check if already installed
+    if [ -d "$INSTALL_DIR" ]; then
+        echo -e "${green}✓ ComfyUI already installed${normal}"
+        echo "Location: $INSTALL_DIR"
+        echo ""
+        echo "To reinstall, remove the directory first:"
+        echo "  rm -rf ~/.comfyui"
+        exit 0
+    fi
+
+    echo "Cloning ComfyUI repository..."
+    if ! git clone https://github.com/comfyanonymous/ComfyUI.git "$INSTALL_DIR"; then
+        echo ""
+        echo -e "${red}${bold}✗ Error:${normal} Failed to clone repository"
+        echo ""
+        echo "Try manual installation:"
+        echo "  git clone https://github.com/comfyanonymous/ComfyUI.git ~/.comfyui"
+        exit 1
+    fi
+
+    echo ""
+    echo "Detecting GPU hardware..."
+
+    # Auto-detect GPU type
+    GPU_TYPE="cpu"
+    PYTORCH_EXTRA=""
+
+    if lspci 2>/dev/null | grep -qi nvidia; then
+        GPU_TYPE="nvidia"
+        PYTORCH_EXTRA="--index-url https://download.pytorch.org/whl/cu130"
+        echo -e "${green}✓ NVIDIA GPU detected${normal} - Installing CUDA 13.0 support"
+    elif lspci 2>/dev/null | grep -qi "VGA.*AMD"; then
+        GPU_TYPE="amd"
+        PYTORCH_EXTRA="--index-url https://download.pytorch.org/whl/rocm6.4"
+        echo -e "${green}✓ AMD GPU detected${normal} - Installing ROCm 6.4 support"
+    elif lspci 2>/dev/null | grep -qi "VGA.*Intel"; then
+        GPU_TYPE="intel"
+        echo -e "${yellow}⚠ Intel GPU detected${normal} - Using CPU-only PyTorch"
+        echo "Note: Intel XPU support requires additional setup (IPEX)"
+    else
+        echo -e "${yellow}⚠ No GPU detected${normal} - Installing CPU-only PyTorch"
+    fi
+
+    echo ""
+    echo "Creating pixi environment configuration..."
+
+    # Create pixi.toml
+    cat > "$INSTALL_DIR/pixi.toml" <<EOF
+[project]
+name = "comfyui"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.12,<3.14"
+pip = "*"
+
+[tasks]
+# Run ComfyUI server
+serve = "python main.py --listen 127.0.0.1 --port 8188"
+# Run ComfyUI with custom arguments
+run = { cmd = "python main.py" }
+EOF
+
+    echo ""
+    echo "Installing Python dependencies (this may take 2-3 minutes)..."
+
+    cd "$INSTALL_DIR"
+
+    # Install pixi environment
+    if ! pixi install; then
+        echo -e "${red}${bold}✗ Error:${normal} Failed to install pixi environment"
+        exit 1
+    fi
+
+    # Install PyTorch and dependencies via pip in pixi environment
+    echo ""
+    echo "Installing PyTorch ($GPU_TYPE variant)..."
+    if [ -n "$PYTORCH_EXTRA" ]; then
+        pixi run pip install torch torchvision torchaudio $PYTORCH_EXTRA --no-cache-dir
+    else
+        pixi run pip install torch torchvision torchaudio --no-cache-dir
+    fi
+
+    # Install ComfyUI requirements
+    echo ""
+    echo "Installing ComfyUI dependencies..."
+    pixi run pip install -r requirements.txt --no-cache-dir
+
+    echo ""
+    echo "Creating model directory structure..."
+
+    # Create model directories
+    mkdir -p "$INSTALL_DIR/models/checkpoints"
+    mkdir -p "$INSTALL_DIR/models/vae"
+    mkdir -p "$INSTALL_DIR/models/loras"
+    mkdir -p "$INSTALL_DIR/models/embeddings"
+    mkdir -p "$INSTALL_DIR/models/controlnet"
+    mkdir -p "$INSTALL_DIR/models/upscale_models"
+
+    echo ""
+    echo -e "${green}${bold}✓ Success:${normal} ComfyUI installed"
+    echo ""
+    echo -e "${bold}Installation:${normal}"
+    echo "  Location: $INSTALL_DIR"
+    echo "  GPU Backend: $GPU_TYPE"
+    echo "  Models: $INSTALL_DIR/models/"
+    echo ""
+    echo -e "${bold}Model Directories:${normal}"
+    echo "  checkpoints/     - Place SD checkpoint files (.safetensors, .ckpt)"
+    echo "  vae/            - VAE files"
+    echo "  loras/          - LoRA models"
+    echo "  embeddings/     - Textual inversion embeddings"
+    echo "  controlnet/     - ControlNet models"
+    echo "  upscale_models/ - Upscaler models"
+    echo ""
+    echo -e "${bold}Usage:${normal}"
+    echo "  cd ~/.comfyui && pixi run serve          # Run manually"
+    echo "  ujust toggle-comfyui enable              # Auto-start at boot"
+    echo "  ujust check-comfyui                      # Check installation status"
+    echo ""
+    echo -e "${bold}Web UI:${normal} http://localhost:8188 (when running)"
+    echo ""
+    echo -e "${yellow}Note:${normal} Download models from Hugging Face or Civitai and place in models/ directories"
+
+# Check ComfyUI installation and service status
+[group("development")]
+check-comfyui:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}ComfyUI Status${normal}"
+    echo ""
+
+    INSTALL_DIR="$HOME/.comfyui"
+
+    # Check installation
+    if [ -d "$INSTALL_DIR" ]; then
+        echo -e "${green}✓ Installed${normal}"
+        echo "  Location: $INSTALL_DIR"
+
+        # Check pixi environment
+        if [ -f "$INSTALL_DIR/pixi.toml" ]; then
+            echo -e "${green}✓ Pixi environment configured${normal}"
+        else
+            echo -e "${yellow}⚠ Pixi environment not found${normal}"
+        fi
+
+        # Detect GPU type from pixi.toml or lspci
+        GPU_TYPE="unknown"
+        if lspci 2>/dev/null | grep -qi nvidia; then
+            GPU_TYPE="NVIDIA (CUDA)"
+        elif lspci 2>/dev/null | grep -qi "VGA.*AMD"; then
+            GPU_TYPE="AMD (ROCm)"
+        elif lspci 2>/dev/null | grep -qi "VGA.*Intel"; then
+            GPU_TYPE="Intel (CPU-only)"
+        else
+            GPU_TYPE="CPU-only"
+        fi
+        echo "  GPU Backend: $GPU_TYPE"
+    else
+        echo -e "${red}✗ Not installed${normal}"
+        echo ""
+        echo "To install: ujust install-comfyui"
+        exit 1
+    fi
+
+    echo ""
+
+    # Check service status
+    SERVICE="comfyui.service"
+    if systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        service_enabled="${green}Enabled${normal}"
+    else
+        service_enabled="${red}Disabled${normal}"
+    fi
+
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        service_active="${green}Running${normal}"
+    else
+        service_active="${red}Stopped${normal}"
+    fi
+
+    echo -e "${bold}Service:${normal} $service_enabled, $service_active"
+
+    # Check linger status
+    linger_status=$(loginctl show-user "$USER" 2>/dev/null | grep "^Linger=" | cut -d= -f2 || echo "no")
+    echo -e "${bold}Linger:${normal} $linger_status (required for boot persistence)"
+
+    echo ""
+
+    # Model directories
+    echo -e "${bold}Model Directories:${normal}"
+    for model_dir in checkpoints vae loras embeddings controlnet upscale_models; do
+        model_path="$INSTALL_DIR/models/$model_dir"
+        if [ -d "$model_path" ]; then
+            file_count=$(find "$model_path" -type f 2>/dev/null | wc -l)
+            dir_size=$(du -sh "$model_path" 2>/dev/null | cut -f1 || echo "0")
+            echo "  $model_dir: $file_count files ($dir_size)"
+        else
+            echo "  $model_dir: ${yellow}missing${normal}"
+        fi
+    done
+
+    echo ""
+    echo -e "${bold}Web UI:${normal} http://localhost:8188 (when running)"
+
+    # If service is running, show helpful commands
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        echo ""
+        echo -e "${bold}Check logs:${normal}"
+        echo "  systemctl --user status comfyui.service"
+        echo "  journalctl --user -u comfyui.service -f"
+    else
+        echo ""
+        echo -e "${bold}Start service:${normal}"
+        echo "  ujust toggle-comfyui enable"
+        echo "  cd ~/.comfyui && pixi run serve  # Or run manually"
+    fi
+
+# Toggle ComfyUI server (enable/disable user systemd service)
+[group("development")]
+toggle-comfyui ACTION="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    ACTION="{{ ACTION }}"
+    ACTION_LOWER=${ACTION,,}
+    SERVICE="comfyui.service"
+    INSTALL_DIR="$HOME/.comfyui"
+
+    # Check if ComfyUI is installed
+    if [ ! -d "$INSTALL_DIR" ]; then
+        echo -e "${red}${bold}Error:${normal} ComfyUI not installed"
+        echo "Install with: ujust install-comfyui"
+        exit 1
+    fi
+
+    # Get current service state
+    if systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        service_enabled="enabled"
+        status_pretty="${green}Enabled${normal}"
+    else
+        service_enabled="disabled"
+        status_pretty="${red}Disabled${normal}"
+    fi
+
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        service_active="active"
+        active_pretty="${green}Running${normal}"
+    else
+        service_active="inactive"
+        active_pretty="${red}Stopped${normal}"
+    fi
+
+    # Check linger status
+    linger_status=$(loginctl show-user "$USER" 2>/dev/null | grep "^Linger=" | cut -d= -f2 || echo "no")
+
+    # Handle status display
+    if [[ $ACTION_LOWER == "status" ]]; then
+        echo -e "${bold}ComfyUI Service Status${normal}"
+        echo ""
+        echo -e "Service: ${bold}$SERVICE${normal} (user service)"
+        echo -e "Enabled: $status_pretty"
+        echo -e "Active: $active_pretty"
+        echo -e "Linger: $linger_status"
+        echo ""
+        if [[ $service_active == "active" ]]; then
+            echo "Web UI: http://localhost:8188"
+            echo ""
+            echo "Check logs:"
+            echo "  systemctl --user status comfyui.service"
+            echo "  journalctl --user -u comfyui.service -f"
+        fi
+        exit 0
+    fi
+
+    # Handle help display
+    if [[ $ACTION_LOWER == "help" ]]; then
+        echo "Usage: ujust toggle-comfyui [enable|disable|status|help]"
+        echo "If no action is provided you'll be prompted with a picker."
+        echo ""
+        echo "Manages ComfyUI as a systemd user service."
+        echo "Linger must be enabled for service to start at boot (before login)."
+        exit 0
+    fi
+
+    # Interactive mode or direct action
+    CHOICE=""
+    if [[ -z $ACTION_LOWER ]]; then
+        echo -e "${bold}ComfyUI Service Configuration${normal}"
+        echo ""
+        echo -e "Service: $status_pretty, $active_pretty"
+        echo -e "Linger: ${linger_status}"
+        echo ""
+        echo "Select action:"
+        echo ""
+        CHOICE=$(ugum choose \
+            "Enable ComfyUI Server" \
+            "Disable ComfyUI Server" \
+            "Exit without changes")
+    else
+        case "$ACTION_LOWER" in
+            enable) CHOICE="Enable ComfyUI Server" ;;
+            disable) CHOICE="Disable ComfyUI Server" ;;
+            *) echo "Unrecognized action: $ACTION" ; exit 1 ;;
+        esac
+    fi
+
+    case "$CHOICE" in
+        "Enable ComfyUI Server")
+            if [[ $service_enabled == "enabled" && $linger_status == "yes" ]]; then
+                echo "ComfyUI Server is already enabled with linger."
+                exit 0
+            fi
+
+            # Create systemd user service directory if it doesn't exist
+            mkdir -p "$HOME/.config/systemd/user"
+
+            # Create service file
+            cat > "$HOME/.config/systemd/user/$SERVICE" <<'EOF'
+[Unit]
+Description=ComfyUI Stable Diffusion GUI
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.comfyui
+Environment="PATH=%h/.pixi/bin:%h/.local/bin:/usr/local/bin:/usr/bin"
+ExecStart=%h/.pixi/bin/pixi run python main.py --listen 127.0.0.1 --port 8188
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=default.target
+EOF
+
+            echo "Enabling ComfyUI Server service..."
+            systemctl --user daemon-reload
+            systemctl --user enable "$SERVICE"
+            systemctl --user start "$SERVICE"
+
+            # Enable linger for boot persistence
+            if [[ $linger_status != "yes" ]]; then
+                echo "Enabling linger for user $USER (required for boot persistence)..."
+                loginctl enable-linger "$USER"
+            fi
+
+            echo ""
+            echo -e "${green}${bold}✓ ComfyUI Server enabled${normal}"
+            echo ""
+            echo "Service will start at boot (before login)."
+            echo "Web UI: http://localhost:8188"
+            echo ""
+            echo "Next steps:"
+            echo "  1. Download models to ~/.comfyui/models/checkpoints/"
+            echo "  2. Open http://localhost:8188 in browser"
+            echo "  3. Check status: ujust toggle-comfyui status"
+            echo ""
+            echo -e "${yellow}Note:${normal} ComfyUI may take 30-60 seconds to start on first run"
+            ;;
+
+        "Disable ComfyUI Server")
+            if [[ $service_enabled == "disabled" ]]; then
+                echo "ComfyUI Server is already disabled."
+                exit 0
+            fi
+
+            echo "Disabling ComfyUI Server service..."
+            systemctl --user stop "$SERVICE"
+            systemctl --user disable "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ ComfyUI Server disabled${normal}"
+            echo ""
+            echo "Service will no longer start at boot."
+
+            # Warn about linger
+            if [[ $linger_status == "yes" ]]; then
+                echo ""
+                echo -e "${yellow}Note:${normal} Linger is still enabled for user $USER."
+                echo "This allows other user services to start at boot."
+                echo "If you have no other services that need boot persistence,"
+                echo "you can disable linger with:"
+                echo "  loginctl disable-linger $USER"
+            fi
+            ;;
+
+        "Exit without changes"|"")
+            echo "No changes made."
+            exit 0
+            ;;
+        *)
+            echo "Unknown selection: $CHOICE" >&2
+            exit 1
+            ;;
+    esac
+
 # Install all development tools (pixi + devcontainers CLI)
 [group("development")]
 install-dev-tools:

@@ -1537,6 +1537,15 @@ ujust check-ollama
 
 # Toggle Ollama server (enable/disable at boot)
 ujust toggle-ollama [enable|disable|status|help]
+
+# Install ComfyUI (Stable Diffusion GUI with node-based workflow)
+ujust install-comfyui
+
+# Check ComfyUI installation and service status
+ujust check-comfyui
+
+# Toggle ComfyUI server (enable/disable at boot)
+ujust toggle-comfyui [enable|disable|status|help]
 ```
 
 ### System Configuration
