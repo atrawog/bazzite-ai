@@ -1788,13 +1788,13 @@ docs-build:
     echo
     echo "Open: docs/_build/html/index.html"
 
-# Serve documentation locally with auto-reload
+# Serve documentation locally with auto-reload (Jupyter Book 2.0)
 [group('Documentation')]
 docs-serve:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Starting documentation server with auto-reload..."
-    echo "Open: http://localhost:8000"
+    echo "Starting documentation server with Jupyter Book 2.0..."
+    echo "Open: http://localhost:3000"
     echo "Press Ctrl+C to stop"
     pixi run docs-serve
 

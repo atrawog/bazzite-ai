@@ -35,7 +35,11 @@ jobs:
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: Build documentation
-        run: pixi run docs-build
+        run: |
+          pixi run docs-build
+          # Jupyter Book 2.0 starts a server after building HTML
+          # Kill any background servers that may have started
+          pkill -f "jupyter-book" || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
