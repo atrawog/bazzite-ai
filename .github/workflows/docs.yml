@@ -32,8 +32,7 @@ jobs:
         with:
           pixi-version: latest
           manifest-path: bazzite-ai/pixi.toml
-          cache: true
-          cache-write: false
+          cache: false
 
       - name: Build documentation
         working-directory: bazzite-ai
