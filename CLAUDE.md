@@ -17,6 +17,75 @@ Key technologies:
 - **Container Tools**: Apptainer (HPC/research), Podman/Docker, WinBoat (Windows apps)
 - **CI/CD**: GitHub Actions with buildah/cosign signing
 
+## Commit Message Convention
+
+**All commits and PR titles must follow semantic commit message format.** This is enforced via automated validation.
+
+### Required Format
+
+```
+<Type>: <description>
+```
+
+**Allowed types:** `Fix:`, `Feat:`, `Docs:`, `Chore:`, `Refactor:`, `Style:`
+
+**Examples:**
+- `Fix: correct path handling in build script`
+- `Feat: add GPU support for containers`
+- `Docs: update installation guide`
+- `Chore: update dependencies to latest versions`
+- `Refactor: simplify build cache logic`
+- `Style: format justfiles with proper indentation`
+
+### Why This Matters
+
+1. **Automated Workflows**: Commit types trigger specific CI/CD actions:
+   - `Feat:`/`Fix:`/`Refactor:` → Full build and tests
+   - `Docs:` → Documentation build only
+   - `Chore:` → Skip expensive CI on feature branches
+
+2. **Clean History**: Makes git log readable and searchable
+3. **Release Automation**: Enables automated changelog generation
+4. **Required Checks**: PRs cannot merge without passing semantic validation
+
+### Validation
+
+Two automated workflows enforce this convention:
+- **semantic-pr.yml** - Validates PR titles
+- **semantic-commits.yml** - Validates all commits in PR/push
+
+**These are required status checks** - failed validation blocks merging.
+
+### Full Documentation
+
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for complete guidelines, including:
+- Detailed type descriptions and examples
+- How to fix failed validation
+- Migration from legacy prefixes (`Add:`, `Update:`, etc.)
+- Pre-commit hooks and linting setup
+- Pull request process
+- Development workflow
+
+### Local Pre-commit Hooks
+
+Bazzite AI includes pre-commit hooks to validate code quality **before** commits reach CI:
+
+**Quick setup:**
+```bash
+ujust install-dev-environment  # One-time setup (installs everything)
+ujust lint                      # Run linters manually
+```
+
+**What's validated:**
+- Shell scripts (ShellCheck)
+- Markdown (markdownlint)
+- YAML (yamllint)
+- TOML (taplo)
+- Justfiles (just --fmt)
+- Commit messages (semantic prefixes)
+
+**Hooks run automatically** on `git commit`. See CONTRIBUTING.md for details.
+
 ## Architecture
 
 ### Container-Based OS Image

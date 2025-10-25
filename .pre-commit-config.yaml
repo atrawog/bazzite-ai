@@ -1,0 +1,76 @@
+default_language_version:
+  python: python3
+
+fail_fast: false
+
+repos:
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '^docs/_build/'
+      - id: end-of-file-fixer
+        exclude: '^docs/_build/'
+      - id: check-yaml
+        args: ['--safe']
+        exclude: '^docs/_build/|\.pre-commit-config\.yaml$'
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=5000']
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: mixed-line-ending
+
+  # Local hooks using system/user-installed tools
+  - repo: local
+    hooks:
+      # ShellCheck (system package)
+      - id: shellcheck
+        name: ShellCheck
+        entry: shellcheck
+        language: system
+        types: [shell]
+        args: ['--severity=warning', '--format=gcc']
+
+      # yamllint (system package)
+      - id: yamllint
+        name: YAML Lint
+        entry: yamllint
+        language: system
+        types: [yaml]
+        args: ['--strict']
+
+      # markdownlint-cli (npm user install)
+      - id: markdownlint
+        name: Markdown Lint
+        entry: bash
+        language: system
+        types: [markdown]
+        args: ['-c', 'markdownlint --fix --config .markdownlint.yaml "$@"', '_']
+        exclude: '^docs/_build/'
+
+      # taplo (cargo user install)
+      - id: taplo
+        name: TOML Formatter
+        entry: bash
+        language: system
+        types: [toml]
+        args: ['-c', 'taplo format --check "$@"', '_']
+
+      # Justfile syntax
+      - id: just-check
+        name: Just Syntax Check
+        entry: bash
+        language: system
+        files: '(^Justfile$|\.just$)'
+        args: ['-c', 'just --unstable --fmt --check -f "$1"', '_']
+        pass_filenames: true
+
+      # Semantic commit message
+      - id: semantic-commit-msg
+        name: Semantic Commit Message
+        entry: scripts/validate-commit-msg.sh
+        language: script
+        stages: [commit-msg]
+        always_run: true

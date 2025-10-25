@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    # Trigger on file changes OR Docs: commits
+    # This allows documentation updates via commit message even if docs/ not changed
+  pull_request:
+    branches:
+      - main
     paths:
       - 'docs/**'
       - 'pixi.toml'
@@ -21,7 +26,76 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Check if docs build should run based on commit messages
+  check-docs-needed:
+    name: Check Docs Build Needed
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for Docs Changes or Docs Commits
+        id: check
+        run: |
+          #!/bin/bash
+          set -e
+
+          # Always build on main branch push
+          if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "Main branch push - check for docs changes or Docs: commits"
+
+            # Get the pushed commits
+            if [[ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
+              COMMIT_RANGE="${{ github.event.before }}..${{ github.event.after }}"
+
+              # Check if any commit is a Docs: commit
+              COMMITS=$(git rev-list --no-merges "${COMMIT_RANGE}" 2>/dev/null || echo "")
+              HAS_DOCS_COMMIT=0
+
+              while IFS= read -r commit; do
+                message=$(git log --format=%s -n 1 "$commit")
+                if [[ "$message" =~ ^"Docs: " ]]; then
+                  echo "Found Docs: commit: $message"
+                  HAS_DOCS_COMMIT=1
+                  break
+                fi
+              done <<< "$COMMITS"
+
+              # Check if any docs files changed
+              DOCS_CHANGED=$(git diff --name-only "$COMMIT_RANGE" | grep -E '^(docs/|pixi\.toml|pixi\.lock|\.github/workflows/docs\.yml)' || echo "")
+
+              if [[ $HAS_DOCS_COMMIT -eq 1 ]] || [[ -n "$DOCS_CHANGED" ]]; then
+                echo "Documentation build needed"
+                echo "should_build=true" >> $GITHUB_OUTPUT
+              else
+                echo "No docs changes or Docs: commits"
+                echo "should_build=false" >> $GITHUB_OUTPUT
+              fi
+            else
+              # New branch or first commit - build
+              echo "New branch - build docs"
+              echo "should_build=true" >> $GITHUB_OUTPUT
+            fi
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # For PRs, path filter already applied, always build
+            echo "PR with docs changes - build required"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual trigger - always build
+            echo "Manual trigger - build docs"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "Unknown event - skip build"
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
+    needs: check-docs-needed
+    if: needs.check-docs-needed.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -47,11 +121,12 @@ jobs:
           path: docs/_build/html
 
   deploy:
+    needs: [check-docs-needed, build]
+    if: needs.check-docs-needed.outputs.should_build == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

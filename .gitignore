@@ -59,3 +59,7 @@ __pycache__/
 # Pixi environment (pixi.lock is committed for reproducibility)
 .pixi/
 
+# Pre-commit and linter caches
+.pre-commit-cache/
+.markdownlint-cache/
+.shellcheck-cache/

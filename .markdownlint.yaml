@@ -1,0 +1,7 @@
+# Markdown linting rules (relaxed for docs)
+default: true
+MD013: false  # Line length (too strict)
+MD033: false  # Inline HTML (needed for MyST)
+MD041: false  # First line must be H1
+MD024: false  # Multiple headers with same content
+MD046: false  # Code block style

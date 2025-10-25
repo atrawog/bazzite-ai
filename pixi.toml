@@ -22,6 +22,18 @@ sphinxcontrib-mermaid = ">=0.9"
 # Jupyter Book 2.x pre-release only available via PyPI (currently 2.0.0b3)
 jupyter-book = ">=2.0.0b0,<3.0"
 
+[feature.dev.dependencies]
+# Pre-commit framework and Python linters
+pre-commit = ">=4.0.0"
+
+[feature.dev.tasks]
+# Linting tasks that can be run with 'pixi run <task>'
+lint-install = "pre-commit install && pre-commit install --hook-type commit-msg"
+lint = "pre-commit run --all-files"
+lint-staged = "pre-commit run"
+lint-fix = "pre-commit run --all-files"
+lint-update = "pre-commit autoupdate"
+
 [tasks]
 # Documentation tasks that can be run with 'pixi run <task>'
 # Note: JB 2.0 uses 'build --html' for static HTML, 'start' for dev server
@@ -30,3 +42,6 @@ docs-build = "cd docs && jupyter-book build --html"
 docs-serve = "cd docs && jupyter-book start"
 docs-clean = "cd docs && jupyter-book clean --all"
 docs-rebuild = { depends-on = ["docs-clean", "docs-build"] }
+
+[environments]
+default = ["dev"]

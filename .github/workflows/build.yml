@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    # Skip build on non-main branches for Docs/Chore only commits
+    # Main branch always builds for production readiness
   merge_group:
   pull_request:
   workflow_dispatch:
@@ -26,7 +28,79 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Check if build should be skipped for Docs/Chore only commits
+  check-skip:
+    name: Check Build Skip
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Commit Types
+        id: check
+        run: |
+          #!/bin/bash
+          set -e
+
+          # Always build on main branch
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "Main branch - always build"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Always build on workflow_dispatch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Manual trigger - always build"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # For PRs and other branches, check commit types
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            COMMIT_RANGE="${BASE_SHA}..${HEAD_SHA}"
+          elif [[ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
+            COMMIT_RANGE="${{ github.event.before }}..${{ github.event.after }}"
+          else
+            # New branch - don't skip
+            echo "New branch - build required"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check if all commits are Docs/Chore
+          COMMITS=$(git rev-list --no-merges "${COMMIT_RANGE}" 2>/dev/null || echo "")
+          if [[ -z "$COMMITS" ]]; then
+            echo "No commits - don't skip"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          NON_DOCS_CHORE=0
+          while IFS= read -r commit; do
+            message=$(git log --format=%s -n 1 "$commit")
+            if [[ ! "$message" =~ ^"Docs: " ]] && [[ ! "$message" =~ ^"Chore: " ]]; then
+              ((NON_DOCS_CHORE++))
+            fi
+          done <<< "$COMMITS"
+
+          if [[ $NON_DOCS_CHORE -eq 0 ]]; then
+            echo "All commits are Docs/Chore - skip build"
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Contains code changes - build required"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
+
   build_push:
+    needs: check-skip
+    if: needs.check-skip.outputs.should_skip != 'true'
     name: Build and push image
     runs-on: ubuntu-24.04
 
@@ -232,6 +306,8 @@ jobs:
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${REGISTRY_PATH}@${DIGEST}
 
   build_containers:
+    needs: check-skip
+    if: needs.check-skip.outputs.should_skip != 'true'
     name: Build container image (${{ matrix.variant.name }})
     runs-on: ubuntu-24.04
 

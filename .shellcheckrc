@@ -1,0 +1,5 @@
+# ShellCheck configuration for bazzite-ai
+external-sources=true
+shell=bash
+# Disable specific checks if needed
+# disable=SC2059,SC2034

@@ -1,0 +1,55 @@
+name: Semantic PR Title
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  pull-requests: write
+  statuses: write
+
+jobs:
+  validate-pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR Title
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Allowed types (one per line)
+          types: |
+            Fix
+            Feat
+            Docs
+            Chore
+            Refactor
+            Style
+          # Require format: "Type: description"
+          # Example: "Fix: correct path handling in build script"
+          requireScope: false
+          subjectPattern: ^.+$
+          subjectPatternError: |
+            The subject "{subject}" doesn't match the required pattern.
+
+            Expected format: "Type: description"
+
+            Examples:
+              ✓ Fix: correct path handling in build script
+              ✓ Feat: add GPU support for containers
+              ✓ Docs: update installation guide
+              ✓ Chore: update dependencies
+              ✓ Refactor: simplify build logic
+              ✓ Style: format code with prettier
+
+            Allowed types: Fix, Feat, Docs, Chore, Refactor, Style
+          # Validate WIP PRs but keep checks pending
+          wip: true
+          # Validate single commits for squash merges
+          validateSingleCommit: true
+          validateSingleCommitMatchesPrTitle: false

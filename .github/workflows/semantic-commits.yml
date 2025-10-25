@@ -1,0 +1,135 @@
+name: Semantic Commit Messages
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  validate-commits:
+    name: Validate Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history to validate all commits
+          fetch-depth: 0
+
+      - name: Validate Commit Messages
+        run: |
+          #!/bin/bash
+          set -e
+
+          echo "=== Semantic Commit Message Validation ==="
+          echo ""
+
+          # Define allowed prefixes (must match exactly with colon and space)
+          ALLOWED_PREFIXES=("Fix:" "Feat:" "Docs:" "Chore:" "Refactor:" "Style:")
+
+          # Color codes for output
+          RED='\033[0;31m'
+          GREEN='\033[0;32m'
+          YELLOW='\033[1;33m'
+          NC='\033[0m' # No Color
+
+          # Determine commit range to validate
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # For PRs: validate commits between base and head
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            COMMIT_RANGE="${BASE_SHA}..${HEAD_SHA}"
+            echo "Validating commits in PR: ${COMMIT_RANGE}"
+          else
+            # For pushes: validate the pushed commits
+            if [[ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
+              # New branch - validate last commit only
+              COMMIT_RANGE="HEAD~1..HEAD"
+              echo "Validating new branch (last commit)"
+            else
+              COMMIT_RANGE="${{ github.event.before }}..${{ github.event.after }}"
+              echo "Validating pushed commits: ${COMMIT_RANGE}"
+            fi
+          fi
+
+          echo ""
+
+          # Get list of commits to validate
+          COMMITS=$(git rev-list --no-merges "${COMMIT_RANGE}" 2>/dev/null || echo "")
+
+          if [[ -z "$COMMITS" ]]; then
+            echo -e "${YELLOW}No commits to validate (likely a merge commit only)${NC}"
+            exit 0
+          fi
+
+          # Validate each commit
+          INVALID_COMMITS=()
+          VALID_COUNT=0
+
+          while IFS= read -r commit; do
+            # Get commit message (first line only)
+            message=$(git log --format=%s -n 1 "$commit")
+
+            # Check if message starts with any allowed prefix
+            valid=false
+            for prefix in "${ALLOWED_PREFIXES[@]}"; do
+              if [[ "$message" =~ ^"$prefix " ]]; then
+                valid=true
+                break
+              fi
+            done
+
+            if [[ "$valid" == true ]]; then
+              echo -e "${GREEN}✓${NC} ${commit:0:7}: $message"
+              ((VALID_COUNT++))
+            else
+              echo -e "${RED}✗${NC} ${commit:0:7}: $message"
+              INVALID_COMMITS+=("$commit: $message")
+            fi
+          done <<< "$COMMITS"
+
+          echo ""
+          echo "=== Validation Summary ==="
+          echo "Valid commits: ${VALID_COUNT}"
+          echo "Invalid commits: ${#INVALID_COMMITS[@]}"
+          echo ""
+
+          # If any commits are invalid, fail with helpful error message
+          if [[ ${#INVALID_COMMITS[@]} -gt 0 ]]; then
+            echo -e "${RED}ERROR: Found ${#INVALID_COMMITS[@]} commit(s) with invalid format${NC}"
+            echo ""
+            echo "Invalid commits:"
+            for commit_msg in "${INVALID_COMMITS[@]}"; do
+              echo "  - $commit_msg"
+            done
+            echo ""
+            echo "Required format: <Type>: <description>"
+            echo ""
+            echo "Allowed types:"
+            echo "  Fix:      Bug fixes"
+            echo "  Feat:     New features"
+            echo "  Docs:     Documentation changes"
+            echo "  Chore:    Maintenance, dependencies, config"
+            echo "  Refactor: Code refactoring"
+            echo "  Style:    Code formatting, style changes"
+            echo ""
+            echo "Examples:"
+            echo "  ✓ Fix: correct path handling in build script"
+            echo "  ✓ Feat: add GPU support for containers"
+            echo "  ✓ Docs: update installation guide"
+            echo "  ✓ Chore: update dependencies to latest versions"
+            echo "  ✓ Refactor: simplify build cache logic"
+            echo "  ✓ Style: format justfiles with proper indentation"
+            echo ""
+            echo "To fix your commits:"
+            echo "  1. Use 'git rebase -i' to edit commit messages"
+            echo "  2. Or amend the last commit: 'git commit --amend'"
+            echo "  3. Force push: 'git push --force-with-lease'"
+            echo ""
+            exit 1
+          fi
+
+          echo -e "${GREEN}All commits follow the semantic commit message convention!${NC}"

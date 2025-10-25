@@ -96,7 +96,11 @@ dnf5 install -y \
     freerdp \
     freerdp-libs \
     fastfetch \
-    openssh-server
+    openssh-server \
+    ShellCheck \
+    yamllint \
+    cargo \
+    rust
 
 # Clean package cache immediately to reduce layer size
 # No longer using cache mounts, so must clean explicitly

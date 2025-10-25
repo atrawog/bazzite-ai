@@ -1,0 +1,118 @@
+name: CI Skip Detection
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  statuses: write
+
+jobs:
+  detect-skip:
+    name: Detect CI Skip Candidates
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+      skip_reason: ${{ steps.check.outputs.skip_reason }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for Docs/Chore Only Commits
+        id: check
+        run: |
+          #!/bin/bash
+          set -e
+
+          echo "=== CI Skip Detection ==="
+          echo ""
+
+          # Get commits in this PR
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          COMMIT_RANGE="${BASE_SHA}..${HEAD_SHA}"
+
+          # Get all commit messages (excluding merge commits)
+          COMMITS=$(git rev-list --no-merges "${COMMIT_RANGE}" 2>/dev/null || echo "")
+
+          if [[ -z "$COMMITS" ]]; then
+            echo "No commits found in range"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            echo "skip_reason=no_commits" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Count commits by type
+          DOCS_COUNT=0
+          CHORE_COUNT=0
+          OTHER_COUNT=0
+          TOTAL_COUNT=0
+
+          while IFS= read -r commit; do
+            message=$(git log --format=%s -n 1 "$commit")
+            ((TOTAL_COUNT++))
+
+            if [[ "$message" =~ ^"Docs: " ]]; then
+              ((DOCS_COUNT++))
+              echo "  [Docs] $message"
+            elif [[ "$message" =~ ^"Chore: " ]]; then
+              ((CHORE_COUNT++))
+              echo "  [Chore] $message"
+            else
+              ((OTHER_COUNT++))
+              echo "  [Other] $message"
+            fi
+          done <<< "$COMMITS"
+
+          echo ""
+          echo "Summary:"
+          echo "  Total commits: $TOTAL_COUNT"
+          echo "  Docs commits: $DOCS_COUNT"
+          echo "  Chore commits: $CHORE_COUNT"
+          echo "  Other commits: $OTHER_COUNT"
+          echo ""
+
+          # Determine if we should skip CI
+          # Skip if ALL commits are Docs or Chore
+          if [[ $OTHER_COUNT -eq 0 ]] && [[ $TOTAL_COUNT -gt 0 ]]; then
+            echo "✓ All commits are Docs/Chore - CI can be skipped"
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+            if [[ $DOCS_COUNT -gt 0 ]] && [[ $CHORE_COUNT -gt 0 ]]; then
+              echo "skip_reason=docs_and_chore" >> $GITHUB_OUTPUT
+            elif [[ $DOCS_COUNT -gt 0 ]]; then
+              echo "skip_reason=docs_only" >> $GITHUB_OUTPUT
+            else
+              echo "skip_reason=chore_only" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "✗ Contains non-Docs/Chore commits - full CI required"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            echo "skip_reason=code_changes" >> $GITHUB_OUTPUT
+          fi
+
+  skip-notification:
+    name: CI Skip Status
+    runs-on: ubuntu-latest
+    needs: detect-skip
+    if: needs.detect-skip.outputs.should_skip == 'true'
+
+    steps:
+      - name: Report Skip Status
+        run: |
+          echo "=== CI Skip Notification ==="
+          echo ""
+          echo "This PR contains only Docs/Chore commits."
+          echo "Reason: ${{ needs.detect-skip.outputs.skip_reason }}"
+          echo ""
+          echo "The following workflows may be skipped:"
+          echo "  - Container image builds (expensive)"
+          echo "  - Full test suites"
+          echo ""
+          echo "The following workflows will still run:"
+          echo "  - Documentation builds (if Docs: commits present)"
+          echo "  - Semantic commit validation"
+          echo "  - Security scans"
+          echo ""

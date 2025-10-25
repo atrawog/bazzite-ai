@@ -1,0 +1,5 @@
+# TOML formatting configuration
+[formatting]
+indent_string = "  "
+column_width = 100
+align_entries = false
