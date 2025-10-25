@@ -206,6 +206,476 @@ just release-clean
 
 **Note:** The `releases/` directory containing ISO images and torrents is git-ignored.
 
+## Documentation System
+
+This project uses **Jupyter Book** with **MyST Markdown** for professional, publication-quality documentation. All documentation is automatically built and deployed to GitHub Pages on every push to the main branch.
+
+**Live Documentation:** https://atrawog.github.io/bazzite-ai/
+
+### Critical Rules for Documentation
+
+**⚠️ IMPORTANT ENFORCEMENT RULES:**
+
+1. **ALL new markdown files MUST be created in `docs/` directory**
+   - ✅ Correct: `docs/user-guide/new-feature.md`
+   - ❌ Wrong: `new-feature.md` (in repository root)
+   - **Exceptions**: Only `README.md` and `CLAUDE.md` are allowed at repository root
+
+2. **ALL documentation MUST use MyST Markdown syntax**
+   - Standard markdown is insufficient for professional documentation
+   - Use MyST directives, roles, and features (see examples below)
+   - Plain markdown will work but misses powerful features
+
+3. **ALL new pages MUST be added to `docs/_toc.yml`**
+   - Pages not in table of contents won't appear in navigation
+   - Maintain hierarchical structure for logical organization
+
+4. **Test locally before committing**
+   - Always run `just docs-build` to verify syntax
+   - Use `just docs-serve` for live preview with auto-reload
+   - Fix any warnings or errors before pushing
+
+### Technology Stack
+
+- **Jupyter Book**: Publication-quality book building system
+- **MyST Markdown**: Extended markdown with directives, roles, cross-references
+- **Sphinx**: Underlying documentation engine (powers Jupyter Book)
+- **pydata-sphinx-theme**: Professional, mobile-responsive theme
+- **Pixi**: Fast, reproducible Python environment manager
+- **GitHub Pages**: Automatic deployment on push to main branch
+
+### Documentation Structure
+
+```
+docs/
+├── _config.yml                        # Jupyter Book configuration
+├── _toc.yml                          # Table of contents (navigation)
+├── index.md                          # Landing page
+├── requirements.txt                  # DEPRECATED (use pixi.toml)
+│
+├── getting-started/
+│   ├── index.md                      # Getting started overview
+│   └── contributing.md               # Contributing guide
+│
+├── user-guide/
+│   ├── index.md                      # User guide overview
+│   ├── containers/
+│   │   ├── index.md                  # Container overview
+│   │   ├── usage.md                  # Container usage
+│   │   └── gpu-setup.md              # GPU setup guide
+│   └── winboat.md                    # Windows app support
+│
+├── developer-guide/
+│   ├── index.md                      # Developer overview
+│   ├── building/
+│   │   ├── index.md                  # Building overview
+│   │   ├── iso-build.md              # ISO building guide
+│   │   └── release-process.md        # Release workflow
+│   └── testing/
+│       ├── index.md                  # Testing overview
+│       ├── container-testing.md      # Container testing
+│       └── manual-testing.md         # Manual testing guide
+│
+├── archive/                          # Historical/test reports (not in TOC)
+│
+└── _static/                          # Static assets
+    ├── css/custom.css
+    └── logo.png
+```
+
+### Build Commands
+
+The documentation system uses **pixi** for dependency management (replaced Python venv for 2-3x faster builds).
+
+**Prerequisites:**
+```bash
+# One-time pixi installation
+curl -fsSL https://pixi.sh/install.sh | bash
+# Restart shell or: source ~/.bashrc
+```
+
+**Local Development:**
+```bash
+# Install dependencies (one-time setup, ~40s first time, ~5s cached)
+just docs-install
+
+# Build documentation (~20s first build, ~8s cached)
+just docs-build
+
+# Serve with auto-reload (opens browser on http://localhost:8000)
+just docs-serve
+
+# Clean build artifacts
+just docs-clean
+
+# Full rebuild (clean + build)
+just docs-rebuild
+```
+
+**Manual pixi commands** (if not using Justfile):
+```bash
+pixi install              # Install dependencies
+pixi run docs-build       # Build documentation
+pixi run docs-serve       # Serve with auto-reload
+pixi run docs-clean       # Clean artifacts
+```
+
+**Output location:** `docs/_build/html/index.html`
+
+### MyST Markdown Features and Examples
+
+MyST (Markedly Structured Text) extends standard markdown with powerful features. **Use these extensively** in documentation.
+
+#### Admonitions (Note/Tip/Warning/Danger Boxes)
+
+```markdown
+:::{note}
+This is a note admonition. Use for supplementary information.
+:::
+
+:::{tip}
+This is a tip. Use for helpful suggestions.
+:::
+
+:::{warning}
+This is a warning. Use for important cautions.
+:::
+
+:::{danger}
+This is a danger box. Use for critical warnings.
+:::
+```
+
+#### Tabbed Content (Platform-Specific Instructions)
+
+```markdown
+::::{tab-set}
+
+:::{tab-item} Linux
+```bash
+sudo dnf install package
+```
+:::
+
+:::{tab-item} macOS
+```bash
+brew install package
+```
+:::
+
+:::{tab-item} Windows
+```powershell
+choco install package
+```
+:::
+
+::::
+```
+
+#### Collapsible Dropdowns
+
+```markdown
+:::{dropdown} Click to expand
+This content is hidden until user clicks the dropdown.
+
+Useful for long sections, optional details, or troubleshooting steps.
+:::
+```
+
+#### Grids and Cards (Navigation Layouts)
+
+```markdown
+::::{grid} 2
+:gutter: 3
+
+:::{grid-item-card} User Guide
+:link: user-guide/index
+:link-type: doc
+
+Learn how to use Bazzite AI
+:::
+
+:::{grid-item-card} Developer Guide
+:link: developer-guide/index
+:link-type: doc
+
+Build and contribute to Bazzite AI
+:::
+
+::::
+```
+
+#### Cross-References Between Pages
+
+```markdown
+<!-- Reference another document (no .md extension) -->
+See {doc}`user-guide/containers/usage` for container usage.
+
+<!-- Reference a section heading -->
+See {ref}`installation-guide` for setup instructions.
+
+<!-- In the target document, mark the section: -->
+(installation-guide)=
+## Installation Guide
+```
+
+#### Code Blocks with Syntax Highlighting
+
+```markdown
+```python
+def hello_world():
+    print("Hello, World!")
+```
+```
+
+Supported languages: python, bash, yaml, json, dockerfile, and 100+ more.
+
+#### Definition Lists (Glossaries)
+
+```markdown
+Term 1
+: Definition of term 1
+
+Term 2
+: Definition of term 2
+: Can have multiple paragraphs
+```
+
+#### Badges and Labels
+
+```markdown
+{bdg-primary}`Primary`
+{bdg-success}`Success`
+{bdg-warning}`Warning`
+{bdg-danger}`Danger`
+{bdg-info}`Info`
+```
+
+#### Margin Notes (Side Comments)
+
+```markdown
+```{margin} Side note
+This appears in the right margin for additional context.
+```
+```
+
+### GitHub Pages Auto-Deployment
+
+Documentation automatically builds and deploys on every push to main branch that affects:
+- `docs/**` (any documentation file)
+- `pixi.toml` (dependency changes)
+- `pixi.lock` (locked dependency versions)
+- `.github/workflows/docs.yml` (workflow changes)
+
+**Workflow:** `.github/workflows/docs.yml`
+- Uses `prefix-dev/setup-pixi@v0.8.1` for fast, cached pixi installation
+- Builds with `pixi run docs-build`
+- Deploys to GitHub Pages automatically
+- **Build time:** ~18-30 seconds in CI (with cache)
+
+**Manual Trigger:**
+```bash
+# Trigger workflow manually (requires gh CLI)
+gh workflow run docs.yml
+```
+
+**View Build Status:**
+- GitHub Actions tab in repository
+- Check run status: https://github.com/atrawog/bazzite-ai/actions/workflows/docs.yml
+
+### Adding New Documentation Pages
+
+**Step-by-step workflow:**
+
+1. **Create the markdown file in appropriate section:**
+   ```bash
+   # Example: Adding new container guide
+   touch docs/user-guide/containers/advanced-usage.md
+   ```
+
+2. **Write content using MyST Markdown:**
+   ```markdown
+   # Advanced Container Usage
+
+   :::{note}
+   This guide covers advanced container topics.
+   :::
+
+   ## Custom Configurations
+
+   See {doc}`usage` for basic container usage.
+
+   ::::{tab-set}
+   :::{tab-item} Podman
+   Advanced podman configuration...
+   :::
+   :::{tab-item} Docker
+   Advanced docker configuration...
+   :::
+   ::::
+   ```
+
+3. **Add to table of contents (`docs/_toc.yml`):**
+   ```yaml
+   - file: user-guide/index
+     sections:
+     - file: user-guide/containers/index
+       sections:
+       - file: user-guide/containers/usage
+       - file: user-guide/containers/advanced-usage  # NEW
+       - file: user-guide/containers/gpu-setup
+   ```
+
+4. **Test locally:**
+   ```bash
+   just docs-build    # Check for errors
+   just docs-serve    # Preview in browser
+   ```
+
+5. **Commit and push:**
+   ```bash
+   git add docs/user-guide/containers/advanced-usage.md docs/_toc.yml
+   git commit -m "Docs: Add advanced container usage guide"
+   git push origin main
+   ```
+
+6. **Verify deployment:**
+   - GitHub Actions builds automatically
+   - Check https://atrawog.github.io/bazzite-ai/ after ~1-2 minutes
+
+### Updating Existing Documentation
+
+**Workflow for documentation updates:**
+
+1. **Edit the markdown file**
+2. **Test with live reload:**
+   ```bash
+   just docs-serve
+   # Opens http://localhost:8000
+   # Auto-reloads on file changes
+   ```
+3. **Commit and push** (auto-deploys)
+
+**No rebuild needed** - Jupyter Book watches for changes during `docs-serve`.
+
+### Documentation Dependencies
+
+Dependencies are managed in `pixi.toml` (repository root):
+
+```toml
+[workspace]
+name = "bazzite-ai-docs"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = ">=3.11,<3.12"
+jupyter-book = ">=1.0.0"
+myst-parser = ">=2.0.0"
+pydata-sphinx-theme = ">=0.15.0"
+sphinx = ">=7.0.0"
+sphinx-design = ">=0.5.0"          # Grids, cards, tabs, dropdowns
+sphinx-copybutton = ">=0.5.0"      # Copy button for code blocks
+sphinx-sitemap = ">=2.5.0"         # SEO sitemap generation
+sphinx-autobuild = ">=2024.0.0"    # Auto-reload for development
+sphinx-tabs = ">=3.4.0"            # Tabbed content
+sphinxcontrib-mermaid = ">=0.9"    # Mermaid diagrams
+```
+
+**Note:** `docs/requirements.txt` is DEPRECATED (kept for reference only). All dependencies are now in `pixi.toml`.
+
+### Performance Improvements (Pixi Migration)
+
+Migration from Python venv to pixi (completed 2025-01):
+
+| Operation | Before (venv) | After (pixi) | Improvement |
+|-----------|---------------|--------------|-------------|
+| First install | ~60s | ~40s | 33% faster |
+| Cached install | N/A | ~5s | Instant |
+| First build | ~30s | ~20s | 33% faster |
+| Cached build | ~15s | ~8s | 47% faster |
+| CI/CD build | ~90s | ~45s | 50% faster |
+
+**Key benefits:**
+- ✅ 2-3x faster builds with better caching
+- ✅ Exact reproducibility via `pixi.lock`
+- ✅ No manual venv management
+- ✅ Cross-platform consistency
+- ✅ Simpler workflow (no activation needed)
+
+### Troubleshooting Documentation Builds
+
+**Build fails with syntax errors:**
+```bash
+just docs-build
+# Check error output for line numbers
+# Common issues:
+# - Unclosed directives (missing :::)
+# - Invalid cross-references ({doc}path/to/missing)
+# - Broken YAML in _toc.yml
+```
+
+**GitHub Actions workflow fails:**
+1. Check workflow logs: https://github.com/atrawog/bazzite-ai/actions
+2. Common issues:
+   - Path errors (ensure files at repo root, not in bazzite-ai/ subdirectory)
+   - Pixi version mismatch (use `pixi-version: latest`)
+   - Missing files in `docs/_toc.yml`
+
+**Links not working:**
+```markdown
+<!-- ✅ Correct internal links -->
+{doc}`path/to/file`           # No .md extension
+{ref}`section-label`          # Reference labeled sections
+
+<!-- ❌ Wrong -->
+[Link](path/to/file.md)       # Standard markdown, no validation
+```
+
+**Pages not appearing in navigation:**
+```yaml
+# Must add to docs/_toc.yml
+- file: path/to/new-page
+```
+
+**Auto-reload not working:**
+```bash
+# Kill any existing servers
+pkill -f sphinx-autobuild
+
+# Restart
+just docs-serve
+```
+
+### Documentation Best Practices
+
+1. **Start with structure** - Create section index.md files first
+2. **Use MyST features liberally** - Tabs, admonitions, grids make content more engaging
+3. **Cross-reference extensively** - Link related pages with {doc} and {ref}
+4. **Test locally always** - Never commit without building first
+5. **Write for your audience** - User guide vs developer guide have different tones
+6. **Keep TOC organized** - Logical hierarchy aids navigation
+7. **Add visual breaks** - Use admonitions, dropdowns, grids to break up long text
+8. **Version-specific info** - Use admonitions to highlight version requirements
+
+### Archive vs Main Documentation
+
+- **Main documentation** (`docs/*/index.md`, etc.): Current, actively maintained content
+  - Appears in `_toc.yml` navigation
+  - Updated regularly
+  - Versioned with releases
+
+- **Archive** (`docs/archive/`): Historical reference, test reports, one-time fixes
+  - NOT in `_toc.yml` (won't appear in navigation)
+  - Searchable via full-text search
+  - Preserved for historical context
+
+**When to archive:**
+- Test reports from specific releases
+- One-time migration documentation
+- Deprecated feature documentation
+- Historical design decisions
+
 ## Testing ujust Command Changes Locally
 
 When developing ujust recipes in `system_files/usr/share/ublue-os/just/`, you can test changes locally without rebuilding the entire container image. This dramatically speeds up the development cycle from hours to seconds.
@@ -851,9 +1321,21 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
   - Reduces context size for faster uploads to buildah
   - Improves cache hit rates by excluding volatile files
 
-**Documentation:**
+**Documentation System:**
+- `pixi.toml` - Pixi workspace configuration with documentation dependencies
+- `pixi.lock` - Locked dependency versions (committed for reproducibility)
+- `docs/_config.yml` - Jupyter Book configuration (title, theme, extensions)
+- `docs/_toc.yml` - Table of contents (navigation structure)
+- `docs/requirements.txt` - DEPRECATED (use pixi.toml instead)
+- `docs/_static/css/custom.css` - Custom styling
+- `.github/workflows/docs.yml` - GitHub Pages auto-deployment workflow
+- `DOCS-MIGRATION-SUMMARY.md` - Documentation migration and pixi migration details
+
+**Developer Documentation:**
 - `docs/ISO-BUILD.md` - Comprehensive ISO building guide
 - `CLAUDE.md` - This file, guidance for Claude Code
+- `docs/CONTAINER.md` - Container usage guide
+- `docs/HOST-SETUP-GPU.md` - GPU setup guide
 
 ## CI/CD Pipeline
 
@@ -974,3 +1456,4 @@ ujust toggle-docker [enable|disable|status|help]
 - **ISO Build Time**: Each ISO variant takes 30-60 minutes to build. The complete release workflow takes 1-2 hours.
 - **SSH Server**: sshd.service is enabled by default for remote access (port 22). Use `ujust toggle-sshd` to disable.
 - **Docker Daemon**: Both docker.socket (on-demand) and docker.service (always-on) are enabled. Socket activation is more efficient. Use `ujust toggle-docker` to switch modes.
+- **Documentation**: ALL .md files MUST be created in `docs/` directory using MyST Markdown syntax (exceptions: README.md, CLAUDE.md). Documentation auto-deploys to GitHub Pages on every push. See "Documentation System" section for details.
