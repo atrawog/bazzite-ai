@@ -34,6 +34,7 @@ jobs:
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: latest
+          manifest-path: bazzite-ai/pixi.toml
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
