@@ -23,9 +23,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: bazzite-ai
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,6 +36,7 @@ jobs:
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: Build documentation
+        working-directory: bazzite-ai
         run: pixi run docs-build
 
       - name: Upload artifact
