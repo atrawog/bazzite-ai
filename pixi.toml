@@ -7,7 +7,7 @@ platforms = ["linux-64"]
 
 [dependencies]
 python = ">=3.11,<3.12"
-jupyter-book = ">=1.0.0"
+# Other Sphinx dependencies from conda-forge
 myst-parser = ">=2.0.0"
 pydata-sphinx-theme = ">=0.15.0"
 sphinx = ">=7.0.0"
@@ -18,10 +18,15 @@ sphinx-autobuild = ">=2024.0.0"
 sphinx-tabs = ">=3.4.0"
 sphinxcontrib-mermaid = ">=0.9"
 
+[pypi-dependencies]
+# Jupyter Book 2.x pre-release only available via PyPI (currently 2.0.0b3)
+jupyter-book = ">=2.0.0b0,<3.0"
+
 [tasks]
 # Documentation tasks that can be run with 'pixi run <task>'
+# Note: JB 2.0 uses 'build --html' for static HTML, 'start' for dev server
 docs-install = "echo '✓ Dependencies already managed by pixi'"
-docs-build = "cd docs && jupyter-book build ."
-docs-serve = "cd docs && sphinx-autobuild . _build/html --port 8000 --open-browser"
-docs-clean = "cd docs && rm -rf _build .jupyter_cache"
+docs-build = "cd docs && jupyter-book build --html"
+docs-serve = "cd docs && jupyter-book start"
+docs-clean = "cd docs && jupyter-book clean --all"
 docs-rebuild = { depends-on = ["docs-clean", "docs-build"] }
