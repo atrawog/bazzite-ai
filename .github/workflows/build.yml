@@ -75,19 +75,21 @@ jobs:
             exit 0
           fi
 
+          echo "Analyzing commits in range..."
           NON_DOCS_CHORE=0
           while IFS= read -r commit; do
             message=$(git log --format=%s -n 1 "$commit")
+            echo "  - $message"
             if [[ ! "$message" =~ ^"Docs: " ]] && [[ ! "$message" =~ ^"Chore: " ]]; then
-              ((NON_DOCS_CHORE++))
+              ((NON_DOCS_CHORE+=1))  # Use +=1 instead of ++ to avoid set -e issues with zero value
             fi
           done <<< "$COMMITS"
 
           if [[ $NON_DOCS_CHORE -eq 0 ]]; then
-            echo "All commits are Docs/Chore - skip build"
+            echo "✓ All commits are Docs/Chore - skip build"
             echo "should_skip=true" >> $GITHUB_OUTPUT
           else
-            echo "Contains code changes - build required"
+            echo "✗ Found $NON_DOCS_CHORE non-Docs/Chore commit(s) - build required"
             echo "should_skip=false" >> $GITHUB_OUTPUT
           fi
 
