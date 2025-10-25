@@ -1,5 +1,23 @@
-# Jupyter Book Documentation Build Requirements
-# Install with: pip install -r requirements.txt
+# ============================================================================
+# DEPRECATED: This file is no longer used for development builds
+# ============================================================================
+#
+# Dependencies are now managed by pixi.toml in the repository root.
+#
+# To build documentation:
+#   1. Install pixi: curl -fsSL https://pixi.sh/install.sh | bash
+#   2. Install dependencies: pixi install
+#   3. Build docs: pixi run docs-build
+#
+# Or use Justfile commands:
+#   just docs-install
+#   just docs-build
+#
+# This file is kept for reference only. Using pip is not recommended.
+# ============================================================================
+
+# Jupyter Book Documentation Build Requirements (DEPRECATED)
+# Install with: pip install -r requirements.txt (NOT RECOMMENDED)
 
 # Core Jupyter Book
 jupyter-book>=1.0.0
