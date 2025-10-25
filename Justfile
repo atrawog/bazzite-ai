@@ -1765,31 +1765,24 @@ release-seed-add torrent_file:
 docs-install:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ ! -d "venv" ]; then
-      echo "Creating Python virtual environment..."
-      python3 -m venv venv
+    if ! command -v pixi &> /dev/null; then
+      echo "✗ pixi not found"
+      echo
+      echo "Install with: curl -fsSL https://pixi.sh/install.sh | bash"
+      echo "Or visit: https://pixi.sh"
+      exit 1
     fi
-    echo "Installing documentation dependencies..."
-    source venv/bin/activate
-    pip install --upgrade pip
-    pip install -r docs/requirements.txt
+    echo "Installing documentation dependencies with pixi..."
+    pixi install
     echo "✓ Documentation dependencies installed"
-    echo "Activate with: source venv/bin/activate"
 
 # Build HTML documentation with Jupyter Book
 [group('Documentation')]
 docs-build:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ ! -d "venv" ]; then
-      echo "✗ Virtual environment not found"
-      echo "Run: just docs-install"
-      exit 1
-    fi
-    source venv/bin/activate
     echo "Building Jupyter Book documentation..."
-    cd docs
-    jupyter-book build .
+    pixi run docs-build
     echo
     echo "✓ Documentation built successfully"
     echo
@@ -1800,30 +1793,21 @@ docs-build:
 docs-serve:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ ! -d "venv" ]; then
-      echo "✗ Virtual environment not found"
-      echo "Run: just docs-install"
-      exit 1
-    fi
-    source venv/bin/activate
     echo "Starting documentation server with auto-reload..."
     echo "Open: http://localhost:8000"
     echo "Press Ctrl+C to stop"
-    cd docs
-    sphinx-autobuild . _build/html --port 8000 --open-browser
+    pixi run docs-serve
 
 # Clean documentation build artifacts
 [group('Documentation')]
 docs-clean:
     #!/usr/bin/env bash
     set -euxo pipefail
-    cd docs
-    rm -rf _build .jupyter_cache
+    pixi run docs-clean
     echo "✓ Documentation build artifacts cleaned"
 
 # Full documentation rebuild (clean + build)
 [group('Documentation')]
 docs-rebuild:
     #!/usr/bin/env bash
-    just docs-clean
-    just docs-build
+    pixi run docs-rebuild
