@@ -763,6 +763,356 @@ EOF
             ;;
     esac
 
+# Install Ollama (local LLM runtime)
+[group("development")]
+install-ollama:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing Ollama${normal}"
+    echo "Local LLM runtime with API server"
+    echo ""
+
+    # Check if already installed
+    if [ -x "$HOME/.local/bin/ollama" ]; then
+        echo -e "${green}✓ Ollama already installed${normal}"
+        echo "Location: $HOME/.local/bin/ollama"
+        if command -v ollama &> /dev/null; then
+            ollama --version 2>/dev/null || echo "Version: $(ollama --version 2>&1 | head -1)"
+        fi
+        echo ""
+        echo "To reinstall, remove the directory first:"
+        echo "  rm -rf ~/.local/bin/ollama ~/.local/lib/ollama"
+        exit 0
+    fi
+
+    OLLAMA_URL="https://ollama.com/download/ollama-linux-amd64.tgz"
+    INSTALL_DIR="$HOME/.local"
+
+    echo "Downloading Ollama from ollama.com..."
+    echo "This may take a few minutes (~500MB)"
+    echo ""
+
+    # Create install directory
+    mkdir -p "${INSTALL_DIR}"
+
+    # Download and extract tarball
+    if ! curl -fL --progress-bar "${OLLAMA_URL}" | tar -xz -C "${INSTALL_DIR}"; then
+        echo ""
+        echo -e "${red}${bold}✗ Error:${normal} Download or extraction failed"
+        echo "URL: ${OLLAMA_URL}"
+        echo ""
+        echo "Try manual installation:"
+        echo "  1. Download from: https://ollama.com/download"
+        echo "  2. Extract tarball to: ${INSTALL_DIR}"
+        exit 1
+    fi
+
+    # Verify installation
+    if [ ! -x "${INSTALL_DIR}/bin/ollama" ]; then
+        echo -e "${red}${bold}✗ Error:${normal} Binary not found after extraction"
+        echo "Expected at: ${INSTALL_DIR}/bin/ollama"
+        exit 1
+    fi
+
+    # Add LD_LIBRARY_PATH to .bashrc if not already present
+    if ! grep -q "LD_LIBRARY_PATH.*\.local/lib/ollama" "$HOME/.bashrc" 2>/dev/null; then
+        echo ""
+        echo "Adding LD_LIBRARY_PATH to ~/.bashrc..."
+        {
+            echo ""
+            echo "# Ollama library path"
+            echo 'export LD_LIBRARY_PATH="$HOME/.local/lib/ollama:$LD_LIBRARY_PATH"'
+        } >> "$HOME/.bashrc"
+    fi
+
+    # Ensure .local/bin is in PATH (usually already there)
+    if ! grep -q "\.local/bin" "$HOME/.bashrc" 2>/dev/null; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    fi
+
+    echo ""
+    echo -e "${green}${bold}✓ Success:${normal} Ollama installed"
+    echo ""
+    echo -e "${bold}Installation:${normal}"
+    echo "  Binary: ${INSTALL_DIR}/bin/ollama"
+    echo "  Libraries: ${INSTALL_DIR}/lib/ollama"
+    echo "  Models: ~/.ollama (created on first run)"
+    echo ""
+    echo -e "${bold}Usage:${normal}"
+    echo "  ollama --version                # Check version"
+    echo "  ollama pull llama3.2            # Download a model"
+    echo "  ollama run llama3.2             # Run a model interactively"
+    echo "  ujust toggle-ollama enable      # Auto-start server at boot"
+    echo "  ujust check-ollama              # Check installation status"
+    echo ""
+    echo -e "${yellow}Note:${normal} Restart your shell or run: source ~/.bashrc"
+
+# Check Ollama installation and service status
+[group("development")]
+check-ollama:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Ollama Status${normal}"
+    echo ""
+
+    # Check binary installation
+    if [ -x "$HOME/.local/bin/ollama" ]; then
+        echo -e "${green}✓ Binary installed${normal}"
+        echo "  Location: $HOME/.local/bin/ollama"
+
+        # Try to get version
+        if command -v ollama &> /dev/null; then
+            version_output=$(ollama --version 2>&1 || true)
+            if [ -n "$version_output" ]; then
+                echo "  Version: $version_output"
+            fi
+        fi
+    else
+        echo -e "${red}✗ Binary not installed${normal}"
+        echo "  Install with: ujust install-ollama"
+        exit 1
+    fi
+
+    echo ""
+
+    # Check library path configuration
+    if grep -q "LD_LIBRARY_PATH.*\.local/lib/ollama" "$HOME/.bashrc" 2>/dev/null; then
+        echo -e "${green}✓ Library path configured${normal}"
+        echo "  LD_LIBRARY_PATH includes ~/.local/lib/ollama"
+    else
+        echo -e "${yellow}⚠ Library path not configured${normal}"
+        echo "  Run install-ollama to configure"
+    fi
+
+    echo ""
+
+    # Check service status
+    SERVICE="ollama.service"
+    if systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        service_enabled="${green}Enabled${normal}"
+    else
+        service_enabled="${red}Disabled${normal}"
+    fi
+
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        service_active="${green}Running${normal}"
+    else
+        service_active="${red}Stopped${normal}"
+    fi
+
+    echo -e "${bold}Service:${normal} $service_enabled, $service_active"
+
+    # Check linger status
+    linger_status=$(loginctl show-user "$USER" 2>/dev/null | grep "^Linger=" | cut -d= -f2 || echo "no")
+    echo -e "${bold}Linger:${normal} $linger_status (required for boot persistence)"
+
+    echo ""
+
+    # Model storage location
+    if [ -d "$HOME/.ollama" ]; then
+        storage_size=$(du -sh "$HOME/.ollama" 2>/dev/null | cut -f1 || echo "unknown")
+        echo -e "${bold}Model Storage:${normal} ~/.ollama ($storage_size)"
+    else
+        echo -e "${bold}Model Storage:${normal} ~/.ollama (not created yet)"
+    fi
+
+    echo ""
+    echo -e "${bold}Server API:${normal} http://localhost:11434 (when server running)"
+
+    # If service is running, show helpful commands
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        echo ""
+        echo -e "${bold}Test API:${normal}"
+        echo "  curl http://localhost:11434/api/tags"
+        echo ""
+        echo -e "${bold}Check logs:${normal}"
+        echo "  systemctl --user status ollama.service"
+        echo "  journalctl --user -u ollama.service"
+    fi
+
+# Toggle Ollama server (enable/disable user systemd service)
+[group("development")]
+toggle-ollama ACTION="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    ACTION="{{ ACTION }}"
+    ACTION_LOWER=${ACTION,,}
+    SERVICE="ollama.service"
+
+    # Check if Ollama is installed
+    if [ ! -x "$HOME/.local/bin/ollama" ]; then
+        echo -e "${red}${bold}Error:${normal} Ollama not installed"
+        echo "Install with: ujust install-ollama"
+        exit 1
+    fi
+
+    # Get current service state
+    if systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        service_enabled="enabled"
+        status_pretty="${green}Enabled${normal}"
+    else
+        service_enabled="disabled"
+        status_pretty="${red}Disabled${normal}"
+    fi
+
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        service_active="active"
+        active_pretty="${green}Running${normal}"
+    else
+        service_active="inactive"
+        active_pretty="${red}Stopped${normal}"
+    fi
+
+    # Check linger status
+    linger_status=$(loginctl show-user "$USER" 2>/dev/null | grep "^Linger=" | cut -d= -f2 || echo "no")
+
+    # Handle status display
+    if [[ $ACTION_LOWER == "status" ]]; then
+        echo -e "${bold}Ollama Service Status${normal}"
+        echo ""
+        echo -e "Service: ${bold}$SERVICE${normal} (user service)"
+        echo -e "Enabled: $status_pretty"
+        echo -e "Active: $active_pretty"
+        echo -e "Linger: $linger_status"
+        echo ""
+        if [[ $service_active == "active" ]]; then
+            echo "Server API: http://localhost:11434"
+            echo ""
+            echo "Test API:"
+            echo "  curl http://localhost:11434/api/tags"
+            echo ""
+            echo "Check logs:"
+            echo "  systemctl --user status ollama.service"
+            echo "  journalctl --user -u ollama.service"
+        fi
+        exit 0
+    fi
+
+    # Handle help display
+    if [[ $ACTION_LOWER == "help" ]]; then
+        echo "Usage: ujust toggle-ollama [enable|disable|status|help]"
+        echo "If no action is provided you'll be prompted with a picker."
+        echo ""
+        echo "Manages Ollama server as a systemd user service."
+        echo "Linger must be enabled for service to start at boot (before login)."
+        exit 0
+    fi
+
+    # Interactive mode or direct action
+    CHOICE=""
+    if [[ -z $ACTION_LOWER ]]; then
+        echo -e "${bold}Ollama Service Configuration${normal}"
+        echo ""
+        echo -e "Service: $status_pretty, $active_pretty"
+        echo -e "Linger: ${linger_status}"
+        echo ""
+        echo "Select action:"
+        echo ""
+        CHOICE=$(ugum choose \
+            "Enable Ollama Server" \
+            "Disable Ollama Server" \
+            "Exit without changes")
+    else
+        case "$ACTION_LOWER" in
+            enable) CHOICE="Enable Ollama Server" ;;
+            disable) CHOICE="Disable Ollama Server" ;;
+            *) echo "Unrecognized action: $ACTION" ; exit 1 ;;
+        esac
+    fi
+
+    case "$CHOICE" in
+        "Enable Ollama Server")
+            if [[ $service_enabled == "enabled" && $linger_status == "yes" ]]; then
+                echo "Ollama Server is already enabled with linger."
+                exit 0
+            fi
+
+            # Create systemd user service directory if it doesn't exist
+            mkdir -p "$HOME/.config/systemd/user"
+
+            # Create service file
+            cat > "$HOME/.config/systemd/user/$SERVICE" <<'EOF'
+[Unit]
+Description=Ollama Service
+After=network.target
+
+[Service]
+Type=simple
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
+Environment="LD_LIBRARY_PATH=%h/.local/lib/ollama"
+ExecStart=%h/.local/bin/ollama serve
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=default.target
+EOF
+
+            echo "Enabling Ollama Server service..."
+            systemctl --user daemon-reload
+            systemctl --user enable "$SERVICE"
+            systemctl --user start "$SERVICE"
+
+            # Enable linger for boot persistence
+            if [[ $linger_status != "yes" ]]; then
+                echo "Enabling linger for user $USER (required for boot persistence)..."
+                loginctl enable-linger "$USER"
+            fi
+
+            echo ""
+            echo -e "${green}${bold}✓ Ollama Server enabled${normal}"
+            echo ""
+            echo "Service will start at boot (before login)."
+            echo "Server API: http://localhost:11434"
+            echo ""
+            echo "Next steps:"
+            echo "  1. Pull a model: ollama pull llama3.2"
+            echo "  2. Test API: curl http://localhost:11434/api/tags"
+            echo "  3. Check status: ujust toggle-ollama status"
+            ;;
+
+        "Disable Ollama Server")
+            if [[ $service_enabled == "disabled" ]]; then
+                echo "Ollama Server is already disabled."
+                exit 0
+            fi
+
+            echo "Disabling Ollama Server service..."
+            systemctl --user stop "$SERVICE"
+            systemctl --user disable "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ Ollama Server disabled${normal}"
+            echo ""
+            echo "Service will no longer start at boot."
+
+            # Warn about linger
+            if [[ $linger_status == "yes" ]]; then
+                echo ""
+                echo -e "${yellow}Note:${normal} Linger is still enabled for user $USER."
+                echo "This allows other user services to start at boot."
+                echo "If you have no other services that need boot persistence,"
+                echo "you can disable linger with:"
+                echo "  loginctl disable-linger $USER"
+            fi
+            ;;
+
+        "Exit without changes"|"")
+            echo "No changes made."
+            exit 0
+            ;;
+        *)
+            echo "Unknown selection: $CHOICE" >&2
+            exit 1
+            ;;
+    esac
+
 # Install all development tools (pixi + devcontainers CLI)
 [group("development")]
 install-dev-tools:

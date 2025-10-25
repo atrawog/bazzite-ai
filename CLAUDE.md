@@ -1528,6 +1528,15 @@ ujust toggle-lmstudio-gui [enable|disable|status|help]
 
 # Toggle LM Studio server mode (API only, more efficient)
 ujust toggle-lmstudio-server [enable|disable|status|help]
+
+# Install Ollama (local LLM runtime)
+ujust install-ollama
+
+# Check Ollama installation and service status
+ujust check-ollama
+
+# Toggle Ollama server (enable/disable at boot)
+ujust toggle-ollama [enable|disable|status|help]
 ```
 
 ### System Configuration
