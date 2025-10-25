@@ -5,9 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'bazzite-ai/docs/**'
-      - 'bazzite-ai/pixi.toml'
-      - 'bazzite-ai/pixi.lock'
+      - 'docs/**'
+      - 'pixi.toml'
+      - 'pixi.lock'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -31,17 +31,16 @@ jobs:
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: latest
-          manifest-path: bazzite-ai/pixi.toml
-          cache: false
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: Build documentation
-        working-directory: bazzite-ai
         run: pixi run docs-build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: bazzite-ai/docs/_build/html
+          path: docs/_build/html
 
   deploy:
     environment:
