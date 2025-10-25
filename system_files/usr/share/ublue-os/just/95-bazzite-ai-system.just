@@ -508,3 +508,149 @@ toggle-docker ACTION="":
             exit 1
             ;;
     esac
+
+# Toggle Syncthing user service (enable/disable at boot)
+[group("system")]
+toggle-syncthing ACTION="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    ACTION="{{ ACTION }}"
+    ACTION_LOWER=${ACTION,,}
+    SERVICE="syncthing.service"
+
+    # Check if linger is enabled
+    linger_status=$(loginctl show-user "$USER" 2>/dev/null | grep "^Linger=" | cut -d= -f2 || echo "no")
+
+    # Get current service state (user service)
+    if systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        service_enabled="enabled"
+        status_pretty="${green}Enabled${normal}"
+    else
+        service_enabled="disabled"
+        status_pretty="${red}Disabled${normal}"
+    fi
+
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        service_active="active"
+        active_pretty="${green}Running${normal}"
+    else
+        service_active="inactive"
+        active_pretty="${red}Stopped${normal}"
+    fi
+
+    # Handle status display
+    if [[ $ACTION_LOWER == "status" ]]; then
+        echo -e "${bold}Syncthing Service Status${normal}"
+        echo ""
+        echo -e "Service: ${bold}$SERVICE${normal} (user service)"
+        echo -e "Enabled: $status_pretty"
+        echo -e "Active: $active_pretty"
+        echo -e "Linger: ${linger_status}"
+        echo ""
+        if [[ $service_active == "active" ]]; then
+            echo "Web UI: http://127.0.0.1:8384"
+            echo ""
+            echo "Check sync status:"
+            echo "  systemctl --user status syncthing.service"
+        fi
+        exit 0
+    fi
+
+    # Handle help display
+    if [[ $ACTION_LOWER == "help" ]]; then
+        echo "Usage: ujust toggle-syncthing [enable|disable|status|help]"
+        echo "If no action is provided you'll be prompted with a picker."
+        echo ""
+        echo "Manages Syncthing as a systemd user service."
+        echo "Linger must be enabled for Syncthing to start at boot (before login)."
+        exit 0
+    fi
+
+    # Interactive mode or direct action
+    CHOICE=""
+    if [[ -z $ACTION_LOWER ]]; then
+        echo -e "${bold}Syncthing Service Configuration${normal}"
+        echo ""
+        echo -e "Service: $status_pretty, $active_pretty"
+        echo -e "Linger: ${linger_status}"
+        echo ""
+        echo "Select action:"
+        echo ""
+        CHOICE=$(ugum choose \
+            "Enable Syncthing" \
+            "Disable Syncthing" \
+            "Exit without changes")
+    else
+        case "$ACTION_LOWER" in
+            enable) CHOICE="Enable Syncthing" ;;
+            disable) CHOICE="Disable Syncthing" ;;
+            *) echo "Unrecognized action: $ACTION" ; exit 1 ;;
+        esac
+    fi
+
+    case "$CHOICE" in
+        "Enable Syncthing")
+            if [[ $service_enabled == "enabled" && $linger_status == "yes" ]]; then
+                echo "Syncthing is already enabled with linger."
+                exit 0
+            fi
+
+            echo "Enabling Syncthing user service..."
+            systemctl --user enable "$SERVICE"
+            systemctl --user start "$SERVICE"
+
+            # Enable linger for boot persistence
+            if [[ $linger_status != "yes" ]]; then
+                echo "Enabling linger for user $USER (required for boot persistence)..."
+                loginctl enable-linger "$USER"
+            fi
+
+            echo ""
+            echo -e "${green}${bold}✓ Syncthing enabled${normal}"
+            echo ""
+            echo "Service will start at boot (before login)."
+            echo "Web UI: http://127.0.0.1:8384"
+            echo ""
+            echo "Next steps:"
+            echo "  1. Open web UI to complete setup"
+            echo "  2. Configure sync folders and devices"
+            echo "  3. Check status: ujust toggle-syncthing status"
+            ;;
+
+        "Disable Syncthing")
+            if [[ $service_enabled == "disabled" ]]; then
+                echo "Syncthing is already disabled."
+                exit 0
+            fi
+
+            echo "Disabling Syncthing user service..."
+            systemctl --user stop "$SERVICE"
+            systemctl --user disable "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ Syncthing disabled${normal}"
+            echo ""
+            echo "Service will no longer start at boot."
+
+            # Warn about linger (don't auto-disable per user's request)
+            if [[ $linger_status == "yes" ]]; then
+                echo ""
+                echo -e "${yellow}Note:${normal} Linger is still enabled for user $USER."
+                echo "This allows other user services to start at boot."
+                echo "If you have no other services that need boot persistence,"
+                echo "you can disable linger with:"
+                echo "  loginctl disable-linger $USER"
+            fi
+            ;;
+
+        "Exit without changes"|"")
+            echo "No changes made."
+            exit 0
+            ;;
+        *)
+            echo "Unknown selection: $CHOICE" >&2
+            exit 1
+            ;;
+    esac

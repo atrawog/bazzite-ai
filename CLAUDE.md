@@ -1515,6 +1515,9 @@ ujust toggle-sshd [enable|disable|status|help]
 
 # Toggle Docker daemon (always-on vs socket-activated)
 ujust toggle-docker [enable|disable|status|help]
+
+# Toggle Syncthing user service (enable/disable at boot)
+ujust toggle-syncthing [enable|disable|status|help]
 ```
 
 ## Important Notes
