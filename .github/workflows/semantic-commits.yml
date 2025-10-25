@@ -84,7 +84,7 @@ jobs:
 
             if [[ "$valid" == true ]]; then
               echo -e "${GREEN}✓${NC} ${commit:0:7}: $message"
-              ((VALID_COUNT++))
+              VALID_COUNT=$((VALID_COUNT + 1))
             else
               echo -e "${RED}✗${NC} ${commit:0:7}: $message"
               INVALID_COMMITS+=("$commit: $message")
