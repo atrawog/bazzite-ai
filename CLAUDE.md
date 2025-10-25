@@ -237,19 +237,20 @@ This project uses **Jupyter Book** with **MyST Markdown** for professional, publ
 
 ### Technology Stack
 
-- **Jupyter Book**: Publication-quality book building system
+- **Jupyter Book 2.0**: Publication-quality book building system (v2.0.0-b3 pre-release)
 - **MyST Markdown**: Extended markdown with directives, roles, cross-references
-- **Sphinx**: Underlying documentation engine (powers Jupyter Book)
-- **pydata-sphinx-theme**: Professional, mobile-responsive theme
+- **MyST Engine**: Node.js-based documentation engine (replaces Sphinx in JB 2.0)
+- **MyST Book Theme**: Modern, mobile-responsive theme
 - **Pixi**: Fast, reproducible Python environment manager
 - **GitHub Pages**: Automatic deployment on push to main branch
+
+**Note**: Jupyter Book 2.0 is a major architectural change from 1.x. It uses the MyST engine instead of Sphinx, with a Node.js runtime for faster builds and modern web features.
 
 ### Documentation Structure
 
 ```
 docs/
-├── _config.yml                        # Jupyter Book configuration
-├── _toc.yml                          # Table of contents (navigation)
+├── myst.yml                          # Jupyter Book 2.0 configuration (replaces _config.yml + _toc.yml)
 ├── index.md                          # Landing page
 ├── requirements.txt                  # DEPRECATED (use pixi.toml)
 │
@@ -302,7 +303,7 @@ just docs-install
 # Build documentation (~20s first build, ~8s cached)
 just docs-build
 
-# Serve with auto-reload (opens browser on http://localhost:8000)
+# Serve with auto-reload (opens browser on http://localhost:3000)
 just docs-serve
 
 # Clean build artifacts
@@ -570,7 +571,7 @@ platforms = ["linux-64"]
 
 [dependencies]
 python = ">=3.11,<3.12"
-jupyter-book = ">=1.0.0"
+# Sphinx extensions from conda-forge
 myst-parser = ">=2.0.0"
 pydata-sphinx-theme = ">=0.15.0"
 sphinx = ">=7.0.0"
@@ -580,9 +581,15 @@ sphinx-sitemap = ">=2.5.0"         # SEO sitemap generation
 sphinx-autobuild = ">=2024.0.0"    # Auto-reload for development
 sphinx-tabs = ">=3.4.0"            # Tabbed content
 sphinxcontrib-mermaid = ">=0.9"    # Mermaid diagrams
+
+[pypi-dependencies]
+# Jupyter Book 2.x pre-release only available via PyPI (currently 2.0.0-b3)
+jupyter-book = ">=2.0.0b0,<3.0"
 ```
 
 **Note:** `docs/requirements.txt` is DEPRECATED (kept for reference only). All dependencies are now in `pixi.toml`.
+
+**Important:** Jupyter Book 2.0 is a pre-release version (beta 3) only available via PyPI. It will move to conda-forge once it reaches stable release.
 
 ### Performance Improvements (Pixi Migration)
 
@@ -1324,11 +1331,10 @@ Developer-focused changes for **KDE Plasma variants** in `build_files/20-install
 **Documentation System:**
 - `pixi.toml` - Pixi workspace configuration with documentation dependencies
 - `pixi.lock` - Locked dependency versions (committed for reproducibility)
-- `docs/_config.yml` - Jupyter Book configuration (title, theme, extensions)
-- `docs/_toc.yml` - Table of contents (navigation structure)
+- `docs/myst.yml` - Jupyter Book 2.0 unified configuration (replaces _config.yml + _toc.yml)
 - `docs/requirements.txt` - DEPRECATED (use pixi.toml instead)
 - `docs/_static/css/custom.css` - Custom styling
-- `.github/workflows/docs.yml` - GitHub Pages auto-deployment workflow
+- `.github/workflows/docs.yml` - GitHub Pages auto-deployment workflow (updated for JB 2.0)
 - `DOCS-MIGRATION-SUMMARY.md` - Documentation migration and pixi migration details
 
 **Developer Documentation:**
