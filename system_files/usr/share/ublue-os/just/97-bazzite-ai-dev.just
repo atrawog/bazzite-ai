@@ -238,6 +238,531 @@ install-devcontainers-cli:
         exit 1
     fi
 
+# Install LM Studio (local LLM runtime)
+[group("development")]
+install-lmstudio:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}Installing LM Studio${normal}"
+    echo "Local LLM runtime with GUI and server modes"
+    echo ""
+
+    # Check if already installed
+    if [ -x "$HOME/.local/bin/lmstudio/LM_Studio.AppImage" ]; then
+        echo -e "${green}✓ LM Studio already installed${normal}"
+        echo "Location: $HOME/.local/bin/lmstudio/"
+        echo ""
+        echo "To reinstall, remove the directory first:"
+        echo "  rm -rf ~/.local/bin/lmstudio"
+        exit 0
+    fi
+
+    LMSTUDIO_VERSION="0.3.30"
+    INSTALL_DIR="$HOME/.local/bin/lmstudio"
+    APPIMAGE_URL="https://releases.lmstudio.ai/linux/x86/${LMSTUDIO_VERSION}/LM_Studio-${LMSTUDIO_VERSION}.AppImage"
+
+    echo "Downloading LM Studio ${LMSTUDIO_VERSION}..."
+    echo "This may take a few minutes (AppImage is ~500MB)"
+    echo ""
+
+    # Create install directory
+    mkdir -p "${INSTALL_DIR}"
+
+    # Download AppImage
+    if ! curl -fL --progress-bar -o "${INSTALL_DIR}/LM_Studio.AppImage" "${APPIMAGE_URL}"; then
+        echo ""
+        echo -e "${red}${bold}✗ Error:${normal} Download failed"
+        echo "URL: ${APPIMAGE_URL}"
+        echo ""
+        echo "Try manual installation:"
+        echo "  1. Download from: https://lmstudio.ai/download"
+        echo "  2. Place AppImage at: ${INSTALL_DIR}/LM_Studio.AppImage"
+        echo "  3. Run: chmod +x ${INSTALL_DIR}/LM_Studio.AppImage"
+        rm -rf "${INSTALL_DIR}"
+        exit 1
+    fi
+
+    # Make executable
+    chmod +x "${INSTALL_DIR}/LM_Studio.AppImage"
+
+    # Create symlink for easy access
+    ln -sf "${INSTALL_DIR}/LM_Studio.AppImage" "$HOME/.local/bin/lmstudio"
+
+    # Add ~/.lmstudio/bin to PATH for lms CLI (will be created on first run)
+    if ! grep -q ".lmstudio/bin" "$HOME/.bashrc" 2>/dev/null; then
+        echo 'export PATH="$HOME/.lmstudio/bin:$PATH"' >> "$HOME/.bashrc"
+    fi
+
+    echo ""
+    echo -e "${green}${bold}✓ Success:${normal} LM Studio installed"
+    echo ""
+    echo -e "${bold}Installation:${normal}"
+    echo "  AppImage: ${INSTALL_DIR}/LM_Studio.AppImage"
+    echo "  Symlink: $HOME/.local/bin/lmstudio"
+    echo "  Models: ~/.cache/lmstudio (created on first run)"
+    echo ""
+    echo -e "${bold}Usage:${normal}"
+    echo "  lmstudio                           # Launch GUI"
+    echo "  ujust toggle-lmstudio-gui enable   # Auto-start GUI at boot"
+    echo "  ujust toggle-lmstudio-server enable # Auto-start server at boot"
+    echo "  ujust check-lmstudio               # Check installation status"
+    echo ""
+    echo -e "${yellow}Note:${normal} CLI tools (~/.lmstudio/bin/lms) will be available after first GUI launch"
+    echo "      Restart your shell or run: source ~/.bashrc"
+
+# Check LM Studio installation and service status
+[group("development")]
+check-lmstudio:
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    echo -e "${bold}LM Studio Status${normal}"
+    echo ""
+
+    # Check AppImage installation
+    if [ -x "$HOME/.local/bin/lmstudio/LM_Studio.AppImage" ]; then
+        echo -e "${green}✓ AppImage installed${normal}"
+        echo "  Location: $HOME/.local/bin/lmstudio/LM_Studio.AppImage"
+
+        # Try to get version (AppImage might not support --version)
+        if [ -L "$HOME/.local/bin/lmstudio" ]; then
+            echo "  Symlink: $HOME/.local/bin/lmstudio → LM_Studio.AppImage"
+        fi
+    else
+        echo -e "${red}✗ AppImage not installed${normal}"
+        echo "  Install with: ujust install-lmstudio"
+        exit 1
+    fi
+
+    echo ""
+
+    # Check CLI tools
+    if [ -x "$HOME/.lmstudio/bin/lms" ]; then
+        echo -e "${green}✓ CLI tools available${normal}"
+        echo "  Location: $HOME/.lmstudio/bin/lms"
+    else
+        echo -e "${yellow}⚠ CLI tools not initialized${normal}"
+        echo "  Run 'lmstudio' once to initialize CLI tools"
+    fi
+
+    echo ""
+
+    # Check GUI service status
+    if systemctl --user is-enabled --quiet lmstudio-gui.service 2>/dev/null; then
+        gui_enabled="${green}Enabled${normal}"
+    else
+        gui_enabled="${red}Disabled${normal}"
+    fi
+
+    if systemctl --user is-active --quiet lmstudio-gui.service 2>/dev/null; then
+        gui_active="${green}Running${normal}"
+    else
+        gui_active="${red}Stopped${normal}"
+    fi
+
+    echo -e "${bold}GUI Service:${normal} $gui_enabled, $gui_active"
+
+    # Check Server service status
+    if systemctl --user is-enabled --quiet lmstudio-server.service 2>/dev/null; then
+        server_enabled="${green}Enabled${normal}"
+    else
+        server_enabled="${red}Disabled${normal}"
+    fi
+
+    if systemctl --user is-active --quiet lmstudio-server.service 2>/dev/null; then
+        server_active="${green}Running${normal}"
+    else
+        server_active="${red}Stopped${normal}"
+    fi
+
+    echo -e "${bold}Server Service:${normal} $server_enabled, $server_active"
+
+    echo ""
+
+    # Check linger status
+    linger_status=$(loginctl show-user "$USER" 2>/dev/null | grep "^Linger=" | cut -d= -f2 || echo "no")
+    echo -e "${bold}Linger:${normal} $linger_status (required for boot persistence)"
+
+    echo ""
+
+    # Model cache location
+    if [ -d "$HOME/.cache/lmstudio" ]; then
+        cache_size=$(du -sh "$HOME/.cache/lmstudio" 2>/dev/null | cut -f1 || echo "unknown")
+        echo -e "${bold}Model Cache:${normal} ~/.cache/lmstudio ($cache_size)"
+    else
+        echo -e "${bold}Model Cache:${normal} ~/.cache/lmstudio (not created yet)"
+    fi
+
+    echo ""
+    echo -e "${bold}Server API:${normal} http://localhost:1234/v1/* (when server running)"
+
+# Toggle LM Studio GUI mode (full application)
+[group("development")]
+toggle-lmstudio-gui ACTION="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    ACTION="{{ ACTION }}"
+    ACTION_LOWER=${ACTION,,}
+    SERVICE="lmstudio-gui.service"
+
+    # Check if LM Studio is installed
+    if [ ! -x "$HOME/.local/bin/lmstudio/LM_Studio.AppImage" ]; then
+        echo -e "${red}${bold}Error:${normal} LM Studio not installed"
+        echo "Install with: ujust install-lmstudio"
+        exit 1
+    fi
+
+    # Get current service state
+    if systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        service_enabled="enabled"
+        status_pretty="${green}Enabled${normal}"
+    else
+        service_enabled="disabled"
+        status_pretty="${red}Disabled${normal}"
+    fi
+
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        service_active="active"
+        active_pretty="${green}Running${normal}"
+    else
+        service_active="inactive"
+        active_pretty="${red}Stopped${normal}"
+    fi
+
+    # Check linger status
+    linger_status=$(loginctl show-user "$USER" 2>/dev/null | grep "^Linger=" | cut -d= -f2 || echo "no")
+
+    # Handle status display
+    if [[ $ACTION_LOWER == "status" ]]; then
+        echo -e "${bold}LM Studio GUI Service Status${normal}"
+        echo ""
+        echo -e "Service: ${bold}$SERVICE${normal} (user service)"
+        echo -e "Enabled: $status_pretty"
+        echo -e "Active: $active_pretty"
+        echo -e "Linger: $linger_status"
+        echo ""
+        if [[ $service_active == "active" ]]; then
+            echo "LM Studio GUI is running"
+            echo ""
+            echo "Check logs:"
+            echo "  systemctl --user status lmstudio-gui.service"
+            echo "  journalctl --user -u lmstudio-gui.service"
+        fi
+        exit 0
+    fi
+
+    # Handle help display
+    if [[ $ACTION_LOWER == "help" ]]; then
+        echo "Usage: ujust toggle-lmstudio-gui [enable|disable|status|help]"
+        echo "If no action is provided you'll be prompted with a picker."
+        echo ""
+        echo "Manages LM Studio GUI as a systemd user service."
+        echo "Linger must be enabled for service to start at boot (before login)."
+        exit 0
+    fi
+
+    # Interactive mode or direct action
+    CHOICE=""
+    if [[ -z $ACTION_LOWER ]]; then
+        echo -e "${bold}LM Studio GUI Service Configuration${normal}"
+        echo ""
+        echo -e "Service: $status_pretty, $active_pretty"
+        echo -e "Linger: ${linger_status}"
+        echo ""
+        echo "Select action:"
+        echo ""
+        CHOICE=$(ugum choose \
+            "Enable LM Studio GUI" \
+            "Disable LM Studio GUI" \
+            "Exit without changes")
+    else
+        case "$ACTION_LOWER" in
+            enable) CHOICE="Enable LM Studio GUI" ;;
+            disable) CHOICE="Disable LM Studio GUI" ;;
+            *) echo "Unrecognized action: $ACTION" ; exit 1 ;;
+        esac
+    fi
+
+    case "$CHOICE" in
+        "Enable LM Studio GUI")
+            if [[ $service_enabled == "enabled" && $linger_status == "yes" ]]; then
+                echo "LM Studio GUI is already enabled with linger."
+                exit 0
+            fi
+
+            # Create systemd user service directory if it doesn't exist
+            mkdir -p "$HOME/.config/systemd/user"
+
+            # Create service file
+            cat > "$HOME/.config/systemd/user/$SERVICE" <<'EOF'
+[Unit]
+Description=LM Studio GUI
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/lmstudio/LM_Studio.AppImage --no-sandbox
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=default.target
+EOF
+
+            echo "Enabling LM Studio GUI service..."
+            systemctl --user daemon-reload
+            systemctl --user enable "$SERVICE"
+            systemctl --user start "$SERVICE"
+
+            # Enable linger for boot persistence
+            if [[ $linger_status != "yes" ]]; then
+                echo "Enabling linger for user $USER (required for boot persistence)..."
+                loginctl enable-linger "$USER"
+            fi
+
+            echo ""
+            echo -e "${green}${bold}✓ LM Studio GUI enabled${normal}"
+            echo ""
+            echo "Service will start at boot (before login)."
+            echo ""
+            echo "Next steps:"
+            echo "  1. LM Studio GUI is now running"
+            echo "  2. Download models through the GUI"
+            echo "  3. Check status: ujust toggle-lmstudio-gui status"
+            ;;
+
+        "Disable LM Studio GUI")
+            if [[ $service_enabled == "disabled" ]]; then
+                echo "LM Studio GUI is already disabled."
+                exit 0
+            fi
+
+            echo "Disabling LM Studio GUI service..."
+            systemctl --user stop "$SERVICE"
+            systemctl --user disable "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ LM Studio GUI disabled${normal}"
+            echo ""
+            echo "Service will no longer start at boot."
+
+            # Warn about linger
+            if [[ $linger_status == "yes" ]]; then
+                echo ""
+                echo -e "${yellow}Note:${normal} Linger is still enabled for user $USER."
+                echo "This allows other user services to start at boot."
+                echo "If you have no other services that need boot persistence,"
+                echo "you can disable linger with:"
+                echo "  loginctl disable-linger $USER"
+            fi
+            ;;
+
+        "Exit without changes"|"")
+            echo "No changes made."
+            exit 0
+            ;;
+        *)
+            echo "Unknown selection: $CHOICE" >&2
+            exit 1
+            ;;
+    esac
+
+# Toggle LM Studio server mode (API only, more efficient)
+[group("development")]
+toggle-lmstudio-server ACTION="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    source /usr/lib/ujust/ujust.sh 2>/dev/null || true
+
+    ACTION="{{ ACTION }}"
+    ACTION_LOWER=${ACTION,,}
+    SERVICE="lmstudio-server.service"
+
+    # Check if LM Studio is installed
+    if [ ! -x "$HOME/.local/bin/lmstudio/LM_Studio.AppImage" ]; then
+        echo -e "${red}${bold}Error:${normal} LM Studio not installed"
+        echo "Install with: ujust install-lmstudio"
+        exit 1
+    fi
+
+    # Check if CLI tools are initialized
+    if [ ! -x "$HOME/.lmstudio/bin/lms" ]; then
+        echo -e "${yellow}${bold}Warning:${normal} LM Studio CLI tools not initialized"
+        echo ""
+        echo "The 'lms' CLI is created on first GUI launch."
+        echo "Please run 'lmstudio' once to initialize, then try again."
+        echo ""
+        echo "Alternatively, enable GUI mode which will initialize it:"
+        echo "  ujust toggle-lmstudio-gui enable"
+        exit 1
+    fi
+
+    # Get current service state
+    if systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
+        service_enabled="enabled"
+        status_pretty="${green}Enabled${normal}"
+    else
+        service_enabled="disabled"
+        status_pretty="${red}Disabled${normal}"
+    fi
+
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        service_active="active"
+        active_pretty="${green}Running${normal}"
+    else
+        service_active="inactive"
+        active_pretty="${red}Stopped${normal}"
+    fi
+
+    # Check linger status
+    linger_status=$(loginctl show-user "$USER" 2>/dev/null | grep "^Linger=" | cut -d= -f2 || echo "no")
+
+    # Handle status display
+    if [[ $ACTION_LOWER == "status" ]]; then
+        echo -e "${bold}LM Studio Server Service Status${normal}"
+        echo ""
+        echo -e "Service: ${bold}$SERVICE${normal} (user service)"
+        echo -e "Enabled: $status_pretty"
+        echo -e "Active: $active_pretty"
+        echo -e "Linger: $linger_status"
+        echo ""
+        if [[ $service_active == "active" ]]; then
+            echo "Server API: http://localhost:1234/v1/*"
+            echo ""
+            echo "Test API:"
+            echo "  curl http://localhost:1234/v1/models"
+            echo ""
+            echo "Check logs:"
+            echo "  systemctl --user status lmstudio-server.service"
+            echo "  journalctl --user -u lmstudio-server.service"
+        fi
+        exit 0
+    fi
+
+    # Handle help display
+    if [[ $ACTION_LOWER == "help" ]]; then
+        echo "Usage: ujust toggle-lmstudio-server [enable|disable|status|help]"
+        echo "If no action is provided you'll be prompted with a picker."
+        echo ""
+        echo "Manages LM Studio server (API-only) as a systemd user service."
+        echo "More efficient than GUI mode for headless/development use."
+        echo "Linger must be enabled for service to start at boot (before login)."
+        exit 0
+    fi
+
+    # Interactive mode or direct action
+    CHOICE=""
+    if [[ -z $ACTION_LOWER ]]; then
+        echo -e "${bold}LM Studio Server Service Configuration${normal}"
+        echo ""
+        echo -e "Service: $status_pretty, $active_pretty"
+        echo -e "Linger: ${linger_status}"
+        echo ""
+        echo "Select action:"
+        echo ""
+        CHOICE=$(ugum choose \
+            "Enable LM Studio Server" \
+            "Disable LM Studio Server" \
+            "Exit without changes")
+    else
+        case "$ACTION_LOWER" in
+            enable) CHOICE="Enable LM Studio Server" ;;
+            disable) CHOICE="Disable LM Studio Server" ;;
+            *) echo "Unrecognized action: $ACTION" ; exit 1 ;;
+        esac
+    fi
+
+    case "$CHOICE" in
+        "Enable LM Studio Server")
+            if [[ $service_enabled == "enabled" && $linger_status == "yes" ]]; then
+                echo "LM Studio Server is already enabled with linger."
+                exit 0
+            fi
+
+            # Create systemd user service directory if it doesn't exist
+            mkdir -p "$HOME/.config/systemd/user"
+
+            # Create service file
+            cat > "$HOME/.config/systemd/user/$SERVICE" <<'EOF'
+[Unit]
+Description=LM Studio Server
+After=network.target
+
+[Service]
+Type=simple
+Environment="PATH=%h/.lmstudio/bin:%h/.local/bin:/usr/local/bin:/usr/bin"
+ExecStart=%h/.lmstudio/bin/lms server start --port 1234
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=default.target
+EOF
+
+            echo "Enabling LM Studio Server service..."
+            systemctl --user daemon-reload
+            systemctl --user enable "$SERVICE"
+            systemctl --user start "$SERVICE"
+
+            # Enable linger for boot persistence
+            if [[ $linger_status != "yes" ]]; then
+                echo "Enabling linger for user $USER (required for boot persistence)..."
+                loginctl enable-linger "$USER"
+            fi
+
+            echo ""
+            echo -e "${green}${bold}✓ LM Studio Server enabled${normal}"
+            echo ""
+            echo "Service will start at boot (before login)."
+            echo "Server API: http://localhost:1234/v1/*"
+            echo ""
+            echo "Next steps:"
+            echo "  1. Load a model (GUI or API)"
+            echo "  2. Test API: curl http://localhost:1234/v1/models"
+            echo "  3. Check status: ujust toggle-lmstudio-server status"
+            ;;
+
+        "Disable LM Studio Server")
+            if [[ $service_enabled == "disabled" ]]; then
+                echo "LM Studio Server is already disabled."
+                exit 0
+            fi
+
+            echo "Disabling LM Studio Server service..."
+            systemctl --user stop "$SERVICE"
+            systemctl --user disable "$SERVICE"
+
+            echo ""
+            echo -e "${green}${bold}✓ LM Studio Server disabled${normal}"
+            echo ""
+            echo "Service will no longer start at boot."
+
+            # Warn about linger
+            if [[ $linger_status == "yes" ]]; then
+                echo ""
+                echo -e "${yellow}Note:${normal} Linger is still enabled for user $USER."
+                echo "This allows other user services to start at boot."
+                echo "If you have no other services that need boot persistence,"
+                echo "you can disable linger with:"
+                echo "  loginctl disable-linger $USER"
+            fi
+            ;;
+
+        "Exit without changes"|"")
+            echo "No changes made."
+            exit 0
+            ;;
+        *)
+            echo "Unknown selection: $CHOICE" >&2
+            exit 1
+            ;;
+    esac
+
 # Install all development tools (pixi + devcontainers CLI)
 [group("development")]
 install-dev-tools:

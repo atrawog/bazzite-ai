@@ -1516,6 +1516,18 @@ ujust install-devcontainers-cli
 
 # Install both pixi and devcontainers CLI
 ujust install-dev-tools
+
+# Install LM Studio (local LLM runtime)
+ujust install-lmstudio
+
+# Check LM Studio installation and service status
+ujust check-lmstudio
+
+# Toggle LM Studio GUI mode (full application)
+ujust toggle-lmstudio-gui [enable|disable|status|help]
+
+# Toggle LM Studio server mode (API only, more efficient)
+ujust toggle-lmstudio-server [enable|disable|status|help]
 ```
 
 ### System Configuration
