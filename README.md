@@ -2,7 +2,7 @@
 
 [![Build Bazzite AI](https://github.com/atrawog/bazzite-ai/actions/workflows/build.yml/badge.svg)](https://github.com/atrawog/bazzite-ai/actions/workflows/build.yml)
 
-This is a custom fork of [Bazzite DX](https://github.com/ublue-os/bazzite-dx) with AI/ML-focused tooling and customizations, building on top of Bazzite with extra developer-specific tools.
+This is a customized overlay image based on [Bazzite](https://github.com/ublue-os/bazzite) with comprehensive GPU support (NVIDIA/AMD/Intel) and AI/ML-focused tooling, extending Bazzite with developer-specific tools and configurations.
 
 **⚠️ Important**: Bazzite AI **only supports KDE Plasma**. GNOME variants are not officially supported.
 
@@ -12,10 +12,13 @@ Bazzite AI provides **1 unified OS image** and **2 container images**:
 
 ### OS Image (KDE Plasma)
 - **bazzite-ai** - Unified image for all hardware (AMD/Intel/NVIDIA)
-  - Based on bazzite-nvidia-open (open NVIDIA drivers work on all GPUs)
-  - NVIDIA Container Toolkit pre-installed
-  - Full GPU acceleration support for containers
-  - Seamless experience regardless of hardware
+  - Based on bazzite-nvidia-open with comprehensive GPU driver support
+  - **NVIDIA:** Open kernel modules (RTX 20 series and newer)
+  - **AMD:** AMDGPU open-source driver (GCN 1+ and RDNA 1-4)
+  - **Intel:** i915/xe drivers (Gen 7+ integrated and Arc discrete)
+  - Pre-configured with nvidia-container-toolkit for GPU containers
+  - Mesa 25.2.4 with Vulkan 1.4 support
+  - Seamless experience regardless of GPU vendor
 
 ### Container Images
 - **bazzite-ai-container** - Base CPU-only development container
@@ -56,6 +59,75 @@ rpm-ostree rebase ostree-image-signed:docker://ghcr.io/atrawog/bazzite-ai:stable
 After running the rebase command, reboot your system to complete the installation.
 
 **Note:** To skip signature verification (not recommended), replace `ostree-image-signed:docker://ghcr.io` with `ostree-unverified-registry:ghcr.io`.
+
+## GPU Compatibility
+
+Bazzite AI includes comprehensive GPU support for all modern graphics hardware through open-source drivers.
+
+### Driver Stack
+
+- **Graphics API:** Mesa 25.2.4 (OpenGL, Vulkan 1.4)
+- **Kernel:** 6.16.4 with latest GPU drivers
+- **NVIDIA:** Open kernel modules 580.95.05 (MIT/GPL)
+- **AMD:** AMDGPU kernel driver + Mesa RADV
+- **Intel:** i915/xe kernel drivers + Mesa ANV
+
+### NVIDIA GPUs (Open Kernel Modules)
+
+| Architecture | GPU Series | Release | Support Status |
+|-------------|------------|---------|----------------|
+| **Blackwell** | RTX 50 series | 2025 | ✅ **Required** (open-source only) |
+| **Ada Lovelace** | RTX 40 series | 2022 | ✅ **Recommended** |
+| **Ampere** | RTX 30 series | 2020 | ✅ **Recommended** |
+| **Turing** | RTX 20, GTX 16 series | 2018 | ✅ **Recommended** |
+| **Volta** | Titan V, datacenter | 2017 | ❌ Not supported (use proprietary) |
+| **Pascal** | GTX 10 series | 2016 | ❌ Not supported (use proprietary) |
+| **Maxwell** | GTX 900/700 series | 2014 | ❌ Not supported (use proprietary) |
+
+**Note:** NVIDIA's open drivers are now the default for Turing and newer GPUs, offering equivalent or better performance than proprietary drivers.
+
+### AMD GPUs (AMDGPU + Mesa RADV)
+
+| Architecture | GPU Series | Release | Support Status |
+|-------------|------------|---------|----------------|
+| **RDNA 4** | RX 9000 series | 2025 | ✅ **Full support** |
+| **RDNA 3** | RX 7000 series | 2022 | ✅ **Full support** |
+| **RDNA 2** | RX 6000 series | 2020 | ✅ **Full support** |
+| **RDNA 1** | RX 5000/5500 series | 2019 | ✅ **Full support** |
+| **GCN 5** | RX Vega series | 2017 | ✅ **Full support** |
+| **GCN 4** | RX 400/500 series | 2016 | ✅ **Full support** |
+| **GCN 3** | R9 Fury/Nano series | 2015 | ✅ **Full support** |
+| **GCN 2** | HD 8000 series | 2013 | ⚠️ Requires kernel params |
+| **GCN 1** | HD 7000 series | 2012 | ⚠️ Requires kernel params |
+| **Pre-GCN** | HD 6000 and older | <2012 | ❌ Not supported |
+
+**Note:** All modern AMD GPUs use the open-source AMDGPU driver with excellent performance.
+
+### Intel GPUs (i915/xe + Mesa ANV)
+
+| Architecture | GPU Series | Release | Driver | Support Status |
+|-------------|------------|---------|--------|----------------|
+| **Battlemage** | Arc B-series | 2024-2025 | **xe** | ✅ **Full support** (kernel 6.12+) |
+| **Lunar Lake** | Core Ultra 200V | 2024 | **xe** | ✅ **Full support** |
+| **Alchemist** | Arc A-series | 2022 | **i915** | ✅ **Recommended** (AV1 encoding) |
+| **Gen 12** | Tiger/Alder/Raptor Lake | 2020-2023 | **i915** | ✅ **Full support** |
+| **Gen 11** | Ice Lake | 2019 | **i915** | ✅ **Full support** |
+| **Gen 9** | Skylake/Kaby/Coffee Lake | 2015-2018 | **i915** | ✅ **Full support** |
+| **Gen 8** | Broadwell | 2014 | **i915** | ✅ **Full support** |
+| **Gen 7** | Haswell/Ivy Bridge | 2012-2013 | **i915** | ✅ **Full support** |
+| **Gen 6** | Sandy Bridge | 2011 | N/A | ❌ Not supported |
+
+**Note:** Bazzite AI includes both i915 (stable, default for Arc Alchemist) and xe (modern, default for Battlemage+) drivers. The system automatically selects the appropriate driver.
+
+### Why Bazzite AI Works on All Hardware
+
+Bazzite AI is based on **bazzite-nvidia-open** which includes:
+- ✅ **NVIDIA open drivers** for modern NVIDIA GPUs (RTX 20 series and newer)
+- ✅ **AMDGPU/Mesa drivers** work seamlessly on AMD hardware
+- ✅ **Intel i915/xe drivers** work seamlessly on Intel hardware
+- ✅ **No conflicts** - unused drivers are simply not loaded
+
+The "nvidia-open" base doesn't prevent use on AMD/Intel systems - it ensures NVIDIA users get optimal support while maintaining full compatibility with all GPU vendors.
 
 ## Development Container
 
