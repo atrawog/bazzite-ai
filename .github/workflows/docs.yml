@@ -33,7 +33,7 @@ jobs:
           pixi-version: latest
           manifest-path: bazzite-ai/pixi.toml
           cache: true
-          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+          cache-write: false
 
       - name: Build documentation
         working-directory: bazzite-ai
