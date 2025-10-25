@@ -1,0 +1,17 @@
+{
+  "test_start": "2025-10-25T01:17:21+02:00",
+  "test_end": "",
+  "total_duration_seconds": 0,
+  "pre_test_count": 11,
+  "post_test_count": 0,
+  "categories_tested": 0,
+  "apps_attempted": 0,
+  "apps_successful": 0,
+  "apps_failed": 0,
+  "apps_already_installed": 0,
+  "disk_usage_before_mb": 6256,
+  "disk_usage_after_mb": 0,
+  "disk_usage_delta_mb": 0,
+  "categories": {},
+  "idempotency_test_passed": true
+}

@@ -1,80 +1,112 @@
-# Bazzite AI Container Guide
+---
+title: Container Usage Guide
+---
+
+# Container Usage Guide
+
+Complete guide to using Bazzite AI development containers for isolated CPU and GPU workflows.
 
 ## Overview
 
-Bazzite AI provides two development container variants for isolated development work:
+Bazzite AI provides **two development container variants** for isolated development work:
 
-1. **bazzite-ai-container** - Base CPU-only development container
-2. **bazzite-ai-container-nvidia** - GPU-accelerated container (builds on base, adds cuDNN/TensorRT)
+::::{grid} 1 1 2 2
+:gutter: 3
 
-Both containers include all development tools from bazzite-ai without the OS overhead, providing safe isolated environments for development.
+:::{grid-item-card} bazzite-ai-container
+**Base CPU-only container**
 
-### Key Features
+Clean image with no NVIDIA/CUDA dependencies
 
-- **Dual Architecture**: Separate base (CPU) and NVIDIA (GPU) containers for optimal efficiency
-- **All Dev Tools**: VS Code, Docker, Python, Node.js, BPF tools, Android tools, and more
-- **Safe Isolation**: Perfect for running Claude Code with `--dangerously-skip-permissions` safely
-- **Container-in-Container**: Docker socket mount for building containers inside container
-- **Pre-built Images**: Auto-built via GitHub Actions, pull from GHCR
-- **VS Code Native**: Full VS Code Dev Containers support
-- **GPU Support**: Full CUDA acceleration via NVIDIA Container Toolkit (nvidia variant only)
-
-### Use Cases
-
-1. **Claude Code Development**: Safe isolated environment for AI-assisted coding
-2. **CUDA/GPU Development**: ML/AI workloads with full GPU acceleration (nvidia variant)
-3. **Multi-platform Development**: Consistent environment across machines
-4. **Experimentation**: Test changes without affecting host system
-5. **HPC/Research**: Reproducible environments via Apptainer .sif files
-
-## Container Variants
-
-### bazzite-ai-container (Base)
-
-**CPU-only development container** - Clean base image with no NVIDIA/CUDA dependencies.
-
-**Purpose:**
-- CPU-only development and testing
-- Lightweight for systems without GPUs
-- Base layer for nvidia variant
-
-**Key Features:**
-- Clean separation: No CUDA/NVIDIA references
-- Smaller size: No ML libraries overhead
-- Fedora 42 base with all development tools
+- Fedora 42 + all dev tools
+- Lightweight, smaller size
+- Perfect for Claude Code
+- Base layer for NVIDIA variant
 
 **Image:** `ghcr.io/atrawog/bazzite-ai-container`
+:::
 
-### bazzite-ai-container-nvidia (NVIDIA)
+:::{grid-item-card} bazzite-ai-container-nvidia
+**GPU-accelerated container**
 
-**GPU-accelerated development container** - Builds on base, adds cuDNN and TensorRT.
+Builds on base + cuDNN + TensorRT
 
-**Purpose:**
-- CUDA-accelerated AI/ML workflows
-- GPU development and testing
-- Includes optimized ML libraries
-
-**Key Features:**
-- Built on base: Layered architecture for efficient builds
-- ML Libraries: cuDNN and TensorRT pre-installed
-- Host passthrough: Uses host CUDA runtime via nvidia-container-toolkit
+- Everything from base
+- ML libraries pre-installed
+- Full CUDA acceleration
+- Host CUDA runtime passthrough
 
 **Image:** `ghcr.io/atrawog/bazzite-ai-container-nvidia`
 
-**Host Requirements:**
-1. Must use **bazzite-ai** (KDE only)
-2. nvidia-container-toolkit (pre-installed)
-3. CDI config via `ujust setup-gpu-containers`
+{bdg-warning}`Requires GPU setup`
+:::
 
-See [HOST-SETUP-GPU.md](HOST-SETUP-GPU.md) for detailed GPU setup.
+::::
 
-## Quick Start: Choose Your Platform
+### Key Features
+
+```{list-table}
+:header-rows: 1
+:widths: 40 60
+
+* - Feature
+  - Description
+* - **Dual Architecture**
+  - Separate CPU and GPU containers for optimal efficiency
+* - **All Dev Tools**
+  - VS Code, Docker, Python, Node.js, BPF tools, Android tools
+* - **Safe Isolation**
+  - Perfect for `--dangerously-skip-permissions` with Claude Code
+* - **Container-in-Container**
+  - Docker socket mount for nested builds
+* - **Pre-built Images**
+  - Auto-built via GitHub Actions, pull from GHCR
+* - **VS Code Native**
+  - Full Dev Containers support
+* - **GPU Support**
+  - Full CUDA acceleration (nvidia variant only)
+```
+
+### Use Cases
+
+::::{grid} 1 1 2 3
+:gutter: 2
+
+:::{grid-item-card} 🤖 Claude Code Development
+Safe isolated environment for AI-assisted coding
+:::
+
+:::{grid-item-card} 🎮 CUDA/GPU Development
+ML/AI workloads with full GPU acceleration
+:::
+
+:::{grid-item-card} 🌐 Multi-platform Development
+Consistent environment across machines
+:::
+
+:::{grid-item-card} 🧪 Experimentation
+Test changes without affecting host
+:::
+
+:::{grid-item-card} 🔬 HPC/Research
+Reproducible environments via Apptainer
+:::
+
+::::
+
+## Quick Start by Platform
 
 ### Option A: Apptainer (Recommended for HPC/Research)
 
-**Best for**: Scientific computing, HPC clusters, reproducible research
+```{admonition} Best for
+:class: tip
 
-#### GPU Development (NVIDIA)
+Scientific computing, HPC clusters, reproducible research with single .sif files
+```
+
+::::{tab-set}
+
+:::{tab-item} GPU Development (NVIDIA)
 
 ```bash
 # Pull the NVIDIA container (creates single .sif file)
@@ -89,7 +121,27 @@ nvidia-smi            # Test GPU
 python train.py       # Run your code
 ```
 
-#### CPU-Only Development
+**Manual commands:**
+
+```bash
+# Pull container
+apptainer pull docker://ghcr.io/atrawog/bazzite-ai-container-nvidia:latest
+
+# Interactive shell with GPU
+apptainer shell --nv --writable-tmpfs \
+  --bind $(pwd):/workspace \
+  bazzite-ai-container-nvidia_latest.sif
+
+# Execute single command
+apptainer exec --nv --writable-tmpfs \
+  --bind $(pwd):/workspace \
+  bazzite-ai-container-nvidia_latest.sif \
+  python script.py
+```
+
+:::
+
+:::{tab-item} CPU-Only Development
 
 ```bash
 # Pull the base container
@@ -103,40 +155,46 @@ cd /workspace          # Your workspace is here
 python script.py      # Run your code
 ```
 
-**Advantages:**
-- Single .sif file → Easy to share/archive for reproducibility
-- No daemon required → Works on HPC clusters
-- Native GPU via `--nv` → No nvidia-container-toolkit setup
-- Standard in research → Used across academia
-- Rootless by design → Secure by default
-
-**Manual Commands:**
+**Manual commands:**
 
 ```bash
-# GPU Development (NVIDIA)
-apptainer pull docker://ghcr.io/atrawog/bazzite-ai-container-nvidia:latest
-apptainer shell --nv --writable-tmpfs \
-  --bind $(pwd):/workspace \
-  bazzite-ai-container-nvidia_latest.sif
-
-# CPU-Only Development
+# Pull container
 apptainer pull docker://ghcr.io/atrawog/bazzite-ai-container:latest
+
+# Interactive shell
 apptainer shell --writable-tmpfs \
   --bind $(pwd):/workspace \
   bazzite-ai-container_latest.sif
 
-# Execute single command (NVIDIA with GPU)
-apptainer exec --nv --writable-tmpfs \
+# Execute single command
+apptainer exec --writable-tmpfs \
   --bind $(pwd):/workspace \
-  bazzite-ai-container-nvidia_latest.sif \
+  bazzite-ai-container_latest.sif \
   python script.py
 ```
 
+:::
+
+::::
+
+**Advantages:**
+- ✅ Single .sif file → Easy to share/archive for reproducibility
+- ✅ No daemon required → Works on HPC clusters
+- ✅ Native GPU via `--nv` → No nvidia-container-toolkit setup
+- ✅ Standard in research → Used across academia
+- ✅ Rootless by design → Secure by default
+
 ### Option B: VS Code Dev Containers
 
-**Best for**: IDE integration, container-in-container development
+```{admonition} Best for
+:class: tip
 
-#### GPU Development (NVIDIA)
+IDE integration, container-in-container development, full-featured environment
+```
+
+::::{tab-set}
+
+:::{tab-item} GPU Development (NVIDIA)
 
 ```bash
 # 1. Open repository in VS Code
@@ -152,12 +210,16 @@ code .
 
 This uses `.devcontainer/devcontainer.json` which configures the NVIDIA variant with GPU support.
 
-**GPU is automatically detected!** The devcontainer configuration:
+```{note}
+GPU is **automatically detected**! The devcontainer configuration:
 - Works on bazzite-ai (with or without NVIDIA GPU)
 - Auto-detects GPU availability and gracefully falls back to CPU-only mode
 - Uses the latest pre-built image from GitHub Container Registry
+```
 
-#### CPU-Only Development
+:::
+
+:::{tab-item} CPU-Only Development
 
 ```bash
 # 1. Open repository in VS Code
@@ -177,9 +239,15 @@ code .
 
 This uses `.devcontainer/devcontainer-base.json` which configures the base (CPU-only) variant.
 
+:::
+
+::::
+
 ### Option C: Standalone Container (Podman/Docker)
 
-#### GPU Development (NVIDIA)
+::::{tab-set}
+
+:::{tab-item} GPU Development (NVIDIA)
 
 ```bash
 # Pull pre-built image
@@ -192,7 +260,9 @@ just run-container-nvidia
 just test-cuda-container
 ```
 
-#### CPU-Only Development
+:::
+
+:::{tab-item} CPU-Only Development
 
 ```bash
 # Pull pre-built image
@@ -202,17 +272,25 @@ just pull-container
 just run-container
 ```
 
+:::
+
+::::
+
 ## Host Requirements
 
 ### For GPU Acceleration (NVIDIA)
 
+```{danger}
 **You must be running bazzite-ai (KDE only).**
 
-⚠️ **Important**: bazzite-ai only supports KDE Plasma, not GNOME.
+Bazzite AI only supports KDE Plasma, not GNOME.
+```
 
-1. **Verify you're on bazzite-ai**:
+**Requirements:**
+
+1. **Verify you're on bazzite-ai:**
    ```bash
-   cat /usr/share/ublue-os/image-info.json | jq -r '.\"image-name\"'
+   cat /usr/share/ublue-os/image-info.json | jq -r '."image-name"'
    # Should output: bazzite-ai
    ```
 
@@ -223,17 +301,19 @@ just run-container
    ujust setup-gpu-containers
    ```
 
-4. **Verify GPU access**:
+4. **Verify GPU access:**
    ```bash
    podman run --rm --device nvidia.com/gpu=all \
      nvidia/cuda:12.6.3-base-fedora42 nvidia-smi
    ```
 
-See [HOST-SETUP-GPU.md](HOST-SETUP-GPU.md) for detailed setup instructions.
+See {doc}`gpu-setup` for detailed setup instructions.
 
 ### For CPU-Only Development
 
-No special requirements. Works on any bazzite-ai variant (including non-NVIDIA).
+```{tip}
+No special requirements! Works on any bazzite-ai variant (including systems without NVIDIA GPUs).
+```
 
 ## Justfile Commands
 
@@ -292,7 +372,10 @@ just clean-container-nvidia
 
 ### GPU Development Setup
 
-1. **Install Dev Containers Extension**:
+::::{dropdown} Step-by-step GPU setup
+:open:
+
+1. **Install Dev Containers Extension:**
    - Open VS Code
    - Press `Ctrl+Shift+X`
    - Search for "Dev Containers"
@@ -304,17 +387,21 @@ just clean-container-nvidia
    ujust setup-gpu-containers
    ```
 
-3. **Open in Container**:
+3. **Open in Container:**
    - Open bazzite-ai repository in VS Code
    - Press `Ctrl+Shift+P`
    - Type "Dev Containers: Reopen in Container"
    - Press Enter (GPU auto-detected)
 
+::::
+
 ### CPU-Only Development Setup
+
+::::{dropdown} Step-by-step CPU-only setup
 
 1. **Install Dev Containers Extension** (same as above)
 
-2. **Open in Container**:
+2. **Open in Container:**
    - Open bazzite-ai repository in VS Code
    - Press `Ctrl+Shift+P`
    - Type "Dev Containers: Open Container Configuration File"
@@ -322,6 +409,8 @@ just clean-container-nvidia
    - Press `Ctrl+Shift+P` again
    - Type "Dev Containers: Reopen in Container"
    - Press Enter
+
+::::
 
 ### Using the Container
 
@@ -344,7 +433,11 @@ ls
 
 ### Getting Updates
 
-The containers use the latest pre-built images from GitHub Container Registry. To get the newest updates:
+```{tip}
+The containers use the latest pre-built images from GitHub Container Registry.
+```
+
+To get the newest updates:
 
 1. Press `Ctrl+Shift+P`
 2. Type "Dev Containers: Rebuild Container"
@@ -436,16 +529,18 @@ Edit `.devcontainer/devcontainer.json` (NVIDIA) or `.devcontainer/devcontainer-b
 }
 ```
 
+(troubleshooting)=
 ## Troubleshooting
 
 ### GPU Not Detected (NVIDIA Variant)
 
-**Symptom**: `nvidia-smi` returns error
+**Symptom:** `nvidia-smi` returns error
 
-**Solutions**:
+::::{dropdown} Solutions
+
 1. Verify you're on bazzite-ai (KDE):
    ```bash
-   cat /usr/share/ublue-os/image-info.json | jq -r '.\"image-name\"'
+   cat /usr/share/ublue-os/image-info.json | jq -r '."image-name"'
    ```
 
 2. Run CDI configuration:
@@ -463,11 +558,14 @@ Edit `.devcontainer/devcontainer.json` (NVIDIA) or `.devcontainer/devcontainer-b
    lsmod | grep nvidia
    ```
 
+::::
+
 ### "nvidia.com/gpu" Device Not Found
 
-**Symptom**: Container fails to start with GPU device error
+**Symptom:** Container fails to start with GPU device error
 
-**Solutions**:
+::::{dropdown} Solutions
+
 1. Regenerate CDI configuration:
    ```bash
    sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
@@ -483,11 +581,14 @@ Edit `.devcontainer/devcontainer.json` (NVIDIA) or `.devcontainer/devcontainer-b
    just run-container  # Use base container instead
    ```
 
+::::
+
 ### SELinux Permission Denied
 
-**Symptom**: Permission errors when accessing files
+**Symptom:** Permission errors when accessing files
 
-**Solutions**:
+::::{dropdown} Solutions
+
 1. Relabel workspace directory:
    ```bash
    chcon -R -t container_file_t ~/path/to/bazzite-ai
@@ -498,11 +599,14 @@ Edit `.devcontainer/devcontainer.json` (NVIDIA) or `.devcontainer/devcontainer-b
    podman run -v $(pwd):/workspace:Z ...
    ```
 
+::::
+
 ### Container Build Fails
 
-**Symptom**: Build errors during `just build-container` or `just build-container-nvidia`
+**Symptom:** Build errors during `just build-container` or `just build-container-nvidia`
 
-**Solutions**:
+::::{dropdown} Solutions
+
 1. Clear buildah cache:
    ```bash
    podman system reset --force
@@ -524,11 +628,14 @@ Edit `.devcontainer/devcontainer.json` (NVIDIA) or `.devcontainer/devcontainer-b
    ping packages.microsoft.com
    ```
 
+::::
+
 ### VS Code Can't Connect
 
-**Symptom**: VS Code fails to connect to container
+**Symptom:** VS Code fails to connect to container
 
-**Solutions**:
+::::{dropdown} Solutions
+
 1. Rebuild container:
    - Press `Ctrl+Shift+P`
    - "Dev Containers: Rebuild Container"
@@ -543,6 +650,8 @@ Edit `.devcontainer/devcontainer.json` (NVIDIA) or `.devcontainer/devcontainer-b
    just pull-container        # For base
    just pull-container-nvidia # For nvidia
    ```
+
+::::
 
 ## Performance Tips
 
@@ -568,9 +677,10 @@ python3 -c "import torch; torch.cuda.empty_cache()"
 
 ### Build Cache
 
-```bash
-# Speed up rebuilds by preserving package cache
-# Add to devcontainer.json:
+Speed up rebuilds by preserving package cache:
+
+```json
+// Add to devcontainer.json:
 "mounts": [
   "source=container-cache,target=/var/cache/dnf5,type=volume"
 ]
@@ -616,13 +726,13 @@ ssh -L 8888:localhost:8888 user@remote-host
 
 ### Safe for skip-permissions
 
+```{tip}
 The containers provide isolation, making it safe to run:
 
-```bash
-claude --dangerously-skip-permissions
-```
+    claude --dangerously-skip-permissions
 
 Changes are contained within the container and don't affect the host system.
+```
 
 ### Non-root User
 
@@ -650,12 +760,14 @@ For enhanced security:
 
 ## Related Documentation
 
-- [HOST-SETUP-GPU.md](HOST-SETUP-GPU.md) - GPU setup on host system
-- [ISO-BUILD.md](ISO-BUILD.md) - Building bazzite-ai ISO
-- [CLAUDE.md](../CLAUDE.md) - Full repository documentation
+```{seealso}
+- {doc}`gpu-setup` - GPU setup on host system
+- {doc}`../../developer-guide/building/iso-build` - Building bazzite-ai ISO
+- {doc}`../../developer-guide/testing/container-testing` - Container testing guide
+```
 
 ## Getting Help
 
 - Check [GitHub Issues](https://github.com/atrawog/bazzite-ai/issues)
-- Review [troubleshooting section](#troubleshooting) above
-- Verify host setup in [HOST-SETUP-GPU.md](HOST-SETUP-GPU.md)
+- Review {ref}`troubleshooting` section above
+- Verify host setup in {doc}`gpu-setup`

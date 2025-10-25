@@ -1,0 +1,22 @@
+{
+  "test_start": "2025-10-25T09:53:35+02:00",
+  "test_end": "",
+  "total_duration_seconds": 0,
+  "skip_pull": false,
+  "base_container": {
+    "sif_file": "",
+    "size_mb": 0,
+    "pulled": false,
+    "run_successful": false
+  },
+  "nvidia_container": {
+    "sif_file": "",
+    "size_mb": 0,
+    "pulled": false,
+    "run_successful": false
+  },
+  "tests_total": 0,
+  "tests_passed": 0,
+  "tests_failed": 0,
+  "tests": {}
+}

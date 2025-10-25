@@ -1,0 +1,129 @@
+# Jupyter Book Configuration
+# Learn more at https://jupyterbook.org/customize/config.html
+
+#######################################################################################
+# Book settings
+title: Bazzite AI Documentation
+author: atrawog
+copyright: "2025"
+logo: _static/logo.png  # Optional: Add a logo if desired
+exclude_patterns:
+  - _build
+  - Thumbs.db
+  - .DS_Store
+  - "**.ipynb_checkpoints"
+  - archive/*  # Exclude archive directory from main build
+
+#######################################################################################
+# Execution settings
+execute:
+  execute_notebooks: "off"  # Don't execute notebooks (we're using .md files)
+
+#######################################################################################
+# Parse and render settings
+parse:
+  myst_enable_extensions:
+    - amsmath           # LaTeX math support
+    - colon_fence       # ::: fences for admonitions
+    - deflist           # Definition lists
+    - dollarmath        # $ and $$ for inline/display math
+    - html_admonition   # HTML-based admonitions
+    - html_image        # HTML image syntax
+    - linkify           # Auto-convert URLs to links
+    - replacements      # Text replacements
+    - smartquotes       # Smart quotes
+    - substitution      # Variable substitutions
+    - tasklist          # Task lists with [ ] and [x]
+    - attrs_inline      # Inline attributes {.class #id}
+    - attrs_block       # Block attributes
+  myst_url_schemes: [mailto, http, https]
+
+#######################################################################################
+# HTML-specific settings
+html:
+  favicon: ""
+  use_edit_page_button: true
+  use_repository_button: true
+  use_issues_button: true
+  use_multitoc_numbering: false
+  extra_footer: |
+    <p>
+      Built with <a href="https://jupyterbook.org">Jupyter Book</a>
+    </p>
+  google_analytics_id: ""  # Add your GA ID if needed
+  home_page_in_navbar: true
+  baseurl: https://atrawog.github.io/bazzite-ai/  # GitHub Pages URL
+  comments:
+    hypothesis: false
+    utterances: false
+
+#######################################################################################
+# LaTeX-specific settings
+latex:
+  latex_engine: pdflatex
+  use_jupyterbook_latex: true
+
+#######################################################################################
+# Launch button settings
+launch_buttons:
+  notebook_interface: classic
+  binderhub_url: ""
+  jupyterhub_url: ""
+  thebe: false
+  colab_url: ""
+
+#######################################################################################
+# Repository settings
+repository:
+  url: https://github.com/atrawog/bazzite-ai
+  path_to_book: bazzite-ai/docs
+  branch: main
+
+#######################################################################################
+# Sphinx settings
+sphinx:
+  extra_extensions:
+    - sphinx_design      # For grids, cards, tabs
+    - sphinx_copybutton  # Copy button for code blocks
+  config:
+    html_theme: pydata_sphinx_theme
+    html_theme_options:
+      repository_url: https://github.com/atrawog/bazzite-ai
+      repository_branch: main
+      path_to_docs: bazzite-ai/docs
+      use_repository_button: true
+      use_edit_button: true
+      use_issues_button: true
+      use_download_button: true
+      logo:
+        text: "Bazzite AI"
+      search_bar_text: "Search the docs..."
+      navigation_with_keys: true
+      show_nav_level: 2
+      show_toc_level: 3
+      navbar_align: left
+      footer_items:
+        - "copyright"
+        - "sphinx-version"
+        - "theme-version"
+    html_context:
+      github_user: atrawog
+      github_repo: bazzite-ai
+      github_version: main
+      doc_path: bazzite-ai/docs
+    html_last_updated_fmt: "%b %d, %Y"
+    html_show_sourcelink: true
+
+    # Copybutton configuration
+    copybutton_prompt_text: '>>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: '
+    copybutton_prompt_is_regexp: true
+    copybutton_only_copy_prompt_lines: true
+    copybutton_remove_prompts: true
+
+    # MyST-NB configuration
+    nb_output_stderr: "remove"
+    nb_execution_mode: "off"
+
+    # Sitemap for SEO
+    html_baseurl: "https://atrawog.github.io/bazzite-ai/"
+    sitemap_url_scheme: "{link}"

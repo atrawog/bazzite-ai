@@ -1,0 +1,44 @@
+# Jupyter Book Table of Contents
+# Learn more at https://jupyterbook.org/customize/toc.html
+
+format: jb-book
+root: index
+title: Home
+
+chapters:
+  - file: getting-started/index
+    title: Getting Started
+    sections:
+      - file: getting-started/contributing
+        title: Contributing Guide
+
+  - file: user-guide/index
+    title: User Guide
+    sections:
+      - file: user-guide/containers/index
+        title: Container Development
+        sections:
+          - file: user-guide/containers/usage
+            title: Container Usage
+          - file: user-guide/containers/gpu-setup
+            title: GPU Setup
+      - file: user-guide/winboat
+        title: Windows Apps (WinBoat)
+
+  - file: developer-guide/index
+    title: Developer Guide
+    sections:
+      - file: developer-guide/building/index
+        title: Building Images
+        sections:
+          - file: developer-guide/building/iso-build
+            title: ISO Building
+          - file: developer-guide/building/release-process
+            title: Release Process
+      - file: developer-guide/testing/index
+        title: Testing
+        sections:
+          - file: developer-guide/testing/container-testing
+            title: Container Testing
+          - file: developer-guide/testing/manual-testing
+            title: Manual Testing

@@ -1,22 +1,30 @@
+---
+title: GPU Setup for Containers
+---
+
 # GPU Setup for Containers
 
-Bazzite AI supports two container platforms with GPU access:
+Bazzite AI supports two container platforms with GPU access: **Apptainer** (native) and **Podman/Docker** (via CDI).
 
 ## Apptainer (Native GPU Support)
 
-**No setup required!** Apptainer has built-in NVIDIA GPU support.
+```{admonition} No setup required!
+:class: tip
+
+Apptainer has built-in NVIDIA GPU support - just use the `--nv` flag.
+```
 
 ### Quick Start
 
 ```bash
-# Pull bazzite-ai-devcontainer
-ujust apptainer-pull-devcontainer
+# Pull bazzite-ai-container-nvidia
+ujust apptainer-pull-container-nvidia
 
 # Run with GPU (auto-detected)
-ujust apptainer-run-devcontainer
+ujust apptainer-run-container-nvidia
 
 # Verify GPU access
-apptainer exec --nv ~/bazzite-ai-devcontainer_latest.sif nvidia-smi
+apptainer exec --nv ~/bazzite-ai-container-nvidia_latest.sif nvidia-smi
 ```
 
 ### Manual Usage
@@ -34,11 +42,13 @@ APPTAINERENV_CUDA_VISIBLE_DEVICES=0,1 apptainer run --nv container.sif
 
 ### How It Works
 
-Apptainer's `--nv` flag:
+```{dropdown} Apptainer's `--nv` flag:
+
 - Binds `/dev/nvidia*` devices into container
 - Mounts CUDA libraries from host
-- Configures LD_LIBRARY_PATH automatically
+- Configures `LD_LIBRARY_PATH` automatically
 - No daemon or toolkit configuration needed
+```
 
 ## Podman/Docker (Requires CDI Setup)
 
@@ -46,9 +56,11 @@ For Podman/Docker GPU access, follow the setup below:
 
 ### Prerequisites
 
+```{danger}
 **You must be running bazzite-ai (KDE only).**
 
-⚠️ **Important**: Bazzite AI only supports KDE Plasma, not GNOME.
+Bazzite AI only supports KDE Plasma, not GNOME.
+```
 
 ### Verify Your Variant
 
@@ -60,7 +72,9 @@ cat /usr/share/ublue-os/image-info.json | jq -r '."image-name"'
 # - bazzite-ai  (KDE with NVIDIA open driver support - works on all GPUs)
 ```
 
+```{note}
 The unified bazzite-ai image includes nvidia-container-toolkit pre-installed for GPU container support.
+```
 
 ### Podman/Docker Setup Steps
 
@@ -82,7 +96,9 @@ lsmod | grep nvidia
 nvidia-smi
 ```
 
+```{tip}
 If `nvidia-smi` doesn't work, you may need to reboot after installing bazzite-ai.
+```
 
 #### Step 2: Verify nvidia-container-toolkit Installation
 
@@ -99,13 +115,19 @@ nvidia-container-toolkit --version
 which nvidia-ctk
 ```
 
+```{warning}
 If not installed (shouldn't happen on recent builds), reinstall bazzite-ai or build a new image.
+```
 
 #### Step 3: Generate CDI Configuration
 
-**This is a one-time setup** that enables GPU passthrough to containers via CDI (Container Device Interface).
+```{admonition} One-time setup
+:class: note
 
-#### Easy Method (Recommended)
+This enables GPU passthrough to containers via CDI (Container Device Interface).
+```
+
+**Easy Method (Recommended):**
 
 ```bash
 # Use the ujust command
@@ -118,7 +140,7 @@ This will:
 3. Generate `/etc/cdi/nvidia.yaml` configuration
 4. Provide next steps
 
-#### Manual Method
+**Manual Method:**
 
 ```bash
 # Generate CDI specification
@@ -128,7 +150,9 @@ sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
 ls -lh /etc/cdi/nvidia.yaml
 ```
 
+```{note}
 The CDI file tells Podman how to expose GPU devices to containers.
+```
 
 #### Step 4: Verify GPU Container Access
 
@@ -138,15 +162,17 @@ Test that containers can access your GPU:
 # Test with NVIDIA CUDA base image
 podman run --rm --device nvidia.com/gpu=all \
   nvidia/cuda:12.6.3-base-fedora42 nvidia-smi
+```
 
-# You should see your GPU listed
-# Example output:
-# +-----------------------------------------------------------------------------+
-# | NVIDIA-SMI 550.54.14    Driver Version: 550.54.14    CUDA Version: 12.4    |
-# |-------------------------------+----------------------+----------------------+
-# | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-# |   0  NVIDIA GeForce RTX 3080  Off | 00000000:01:00.0 On |                  N/A |
-# +-------------------------------+----------------------+----------------------+
+**Expected output:**
+
+```text
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 550.54.14    Driver Version: 550.54.14    CUDA Version: 12.4   |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+|   0  NVIDIA GeForce RTX 3080  Off | 00000000:01:00.0 On |                  N/A |
++-------------------------------+----------------------+----------------------+
 ```
 
 #### Step 5: Test with Devcontainer
@@ -155,10 +181,10 @@ podman run --rm --device nvidia.com/gpu=all \
 cd /path/to/bazzite-ai
 
 # Pull the devcontainer
-just pull-devcontainer
+just pull-container-nvidia
 
 # Test CUDA access
-just test-cuda-devcontainer
+just test-cuda-container
 
 # You should see nvidia-smi output showing your GPU
 ```
@@ -167,11 +193,11 @@ just test-cuda-devcontainer
 
 ### nvidia-container-toolkit Not Found
 
-**Symptom**: `ujust setup-gpu-containers` says nvidia-container-toolkit not found
+**Symptom:** `ujust setup-gpu-containers` says nvidia-container-toolkit not found
 
-**Cause**: Running an old build before nvidia-container-toolkit was included
+**Cause:** Running an old build before nvidia-container-toolkit was included
 
-**Solutions**:
+::::{dropdown} Solutions
 
 1. Verify you're on bazzite-ai:
    ```bash
@@ -190,11 +216,13 @@ just test-cuda-devcontainer
    # Look for pending deployment
    ```
 
+::::
+
 ### GPU Not Detected on Host
 
-**Symptom**: `nvidia-smi` returns "No devices were found"
+**Symptom:** `nvidia-smi` returns "No devices were found"
 
-**Solutions**:
+::::{dropdown} Solutions
 
 1. Reboot after installing bazzite-ai:
    ```bash
@@ -207,17 +235,19 @@ just test-cuda-devcontainer
    # Should show your NVIDIA card
    ```
 
-3. Verify you have nvidia variant (not base bazzite-ai):
+3. Verify you have nvidia packages:
    ```bash
    rpm -qa | grep nvidia
    # Should show many nvidia packages
    ```
 
+::::
+
 ### CDI Configuration Missing
 
-**Symptom**: Container fails with "nvidia.com/gpu: device not found"
+**Symptom:** Container fails with "nvidia.com/gpu: device not found"
 
-**Solutions**:
+::::{dropdown} Solutions
 
 1. Regenerate CDI config:
    ```bash
@@ -235,11 +265,13 @@ just test-cuda-devcontainer
    systemctl --user restart podman.socket
    ```
 
+::::
+
 ### SELinux Denials
 
-**Symptom**: "Permission denied" errors accessing GPU
+**Symptom:** "Permission denied" errors accessing GPU
 
-**Solutions**:
+::::{dropdown} Solutions
 
 1. Check SELinux is enabled:
    ```bash
@@ -255,11 +287,13 @@ just test-cuda-devcontainer
    # See: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#selinux
    ```
 
+::::
+
 ### Containers Can't See GPU But Host Can
 
-**Symptom**: `nvidia-smi` works on host, fails in container
+**Symptom:** `nvidia-smi` works on host, fails in container
 
-**Solutions**:
+::::{dropdown} Solutions
 
 1. Verify CDI configuration:
    ```bash
@@ -287,18 +321,22 @@ just test-cuda-devcontainer
      nvidia/cuda:12.6.3-base-fedora42 nvidia-smi
    ```
 
+::::
+
 ### Old CUDA Version in Container
 
-**Symptom**: Container shows different CUDA version than expected
+**Symptom:** Container shows different CUDA version than expected
 
-**Note**: This is normal! The CUDA version shown by `nvidia-smi` in the container reflects the **host driver** version, not the container's CUDA toolkit version.
+```{note}
+**This is normal!** The CUDA version shown by `nvidia-smi` in the container reflects the **host driver** version, not the container's CUDA toolkit version.
+```
 
 ```bash
 # Check host driver version
 nvidia-smi | grep "Driver Version"
 
 # Check container CUDA toolkit version
-podman run --rm bazzite-ai-devcontainer:latest nvcc --version
+podman run --rm bazzite-ai-container-nvidia:latest nvcc --version
 ```
 
 They can be different - this is expected and usually not a problem.
@@ -312,7 +350,7 @@ If you have multiple GPUs, you can select specific ones:
 ```bash
 # Use only GPU 0
 export CUDA_VISIBLE_DEVICES=0
-just run-devcontainer
+just run-container-nvidia
 
 # Or in devcontainer.json:
 {
@@ -326,7 +364,7 @@ just run-devcontainer
 
 Edit `/etc/cdi/nvidia.yaml` to customize GPU exposure:
 
-```yaml
+```bash
 # View current config
 cat /etc/cdi/nvidia.yaml
 
@@ -352,20 +390,18 @@ Use this checklist to verify everything is working:
 - [ ] `nvidia-container-toolkit` is installed
 - [ ] `/etc/cdi/nvidia.yaml` exists
 - [ ] Test container can see GPU: `podman run --rm --device nvidia.com/gpu=all nvidia/cuda:12.6.3-base-fedora42 nvidia-smi`
-- [ ] `just test-cuda-devcontainer` shows GPU
+- [ ] `just test-cuda-container` shows GPU
 - [ ] VS Code devcontainer can access GPU
 
 ## Related Documentation
 
-- [CONTAINER.md](CONTAINER.md) - Container usage guide
-- [ISO-BUILD.md](ISO-BUILD.md) - Building bazzite-ai ISO
-- [CLAUDE.md](../CLAUDE.md) - Full repository documentation
-
-## External Resources
-
+```{seealso}
+- {doc}`usage` - Container usage guide
+- {doc}`../../developer-guide/building/iso-build` - Building bazzite-ai ISO
 - [NVIDIA Container Toolkit Documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/)
 - [Podman CDI Documentation](https://podman-desktop.io/docs/podman/gpu)
 - [Fedora NVIDIA Guide](https://rpmfusion.org/Howto/NVIDIA)
+```
 
 ## Getting Help
 

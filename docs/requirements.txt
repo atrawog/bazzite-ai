@@ -1,0 +1,22 @@
+# Jupyter Book Documentation Build Requirements
+# Install with: pip install -r requirements.txt
+
+# Core Jupyter Book
+jupyter-book>=1.0.0
+
+# MyST Parser (included with jupyter-book but pinning for clarity)
+myst-parser>=2.0.0
+
+# Sphinx theme
+pydata-sphinx-theme>=0.15.0
+
+# Sphinx extensions
+sphinx>=7.0.0
+sphinx-design>=0.5.0        # For grids, cards, tabs, dropdowns
+sphinx-copybutton>=0.5.0    # Copy button for code blocks
+sphinx-sitemap>=2.5.0       # SEO sitemap generation
+
+# Optional but recommended
+sphinx-autobuild>=2024.0.0  # Auto-reload for development
+sphinx-tabs>=3.4.0          # Tabbed content
+sphinxcontrib-mermaid>=0.9  # Mermaid diagrams

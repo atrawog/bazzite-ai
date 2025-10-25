@@ -1,0 +1,68 @@
+/* Custom CSS for Bazzite AI Documentation */
+
+/* Improve code block styling */
+div.highlight {
+    border-radius: 4px;
+    margin: 1em 0;
+}
+
+/* Enhance admonition styling */
+.admonition {
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.admonition.note {
+    border-left: 4px solid #3498db;
+}
+
+.admonition.tip {
+    border-left: 4px solid #2ecc71;
+}
+
+.admonition.warning {
+    border-left: 4px solid #f39c12;
+}
+
+.admonition.danger {
+    border-left: 4px solid #e74c3c;
+}
+
+/* Improve table of contents navigation */
+.bd-toc {
+    font-size: 0.9rem;
+}
+
+/* Better spacing for grid cards */
+.sd-card {
+    margin-bottom: 1rem;
+}
+
+/* Code copy button hover effect */
+button.copybtn {
+    opacity: 0.4;
+    transition: opacity 0.2s;
+}
+
+button.copybtn:hover {
+    opacity: 1;
+}
+
+/* Improve tab styling */
+.sd-tab-set {
+    margin: 1.5em 0;
+}
+
+/* Footer improvements */
+.bd-footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .bd-sidebar {
+        font-size: 0.85rem;
+    }
+}

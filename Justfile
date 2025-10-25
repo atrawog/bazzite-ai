@@ -233,7 +233,7 @@ build-container $tag=default_tag:
 build-container-nvidia $tag=default_tag: (build-container tag)
     ${PODMAN} build \
       -f Containerfile.container-nvidia \
-      --build-arg BASE_TAG={{tag}} \
+      --build-arg BASE_TAG={{ tag }} \
       --build-arg BASE_IMAGE=localhost/bazzite-ai-container \
       --tag "bazzite-ai-container-nvidia:${tag}" \
       .
@@ -248,7 +248,7 @@ rebuild-container $tag=default_tag:
       .
     ${PODMAN} build --no-cache \
       -f Containerfile.container-nvidia \
-      --build-arg BASE_TAG={{tag}} \
+      --build-arg BASE_TAG={{ tag }} \
       --build-arg BASE_IMAGE=localhost/bazzite-ai-container \
       --tag "bazzite-ai-container-nvidia:${tag}" \
       .
@@ -1755,3 +1755,75 @@ release-seed-add torrent_file:
       echo "✗ Failed to add torrent"
       exit 1
     fi
+
+# ============================================
+# Documentation Commands
+# ============================================
+
+# Install Python dependencies for building docs
+[group('Documentation')]
+docs-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -d "venv" ]; then
+      echo "Creating Python virtual environment..."
+      python3 -m venv venv
+    fi
+    echo "Installing documentation dependencies..."
+    source venv/bin/activate
+    pip install --upgrade pip
+    pip install -r docs/requirements.txt
+    echo "✓ Documentation dependencies installed"
+    echo "Activate with: source venv/bin/activate"
+
+# Build HTML documentation with Jupyter Book
+[group('Documentation')]
+docs-build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -d "venv" ]; then
+      echo "✗ Virtual environment not found"
+      echo "Run: just docs-install"
+      exit 1
+    fi
+    source venv/bin/activate
+    echo "Building Jupyter Book documentation..."
+    cd docs
+    jupyter-book build .
+    echo
+    echo "✓ Documentation built successfully"
+    echo
+    echo "Open: docs/_build/html/index.html"
+
+# Serve documentation locally with auto-reload
+[group('Documentation')]
+docs-serve:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -d "venv" ]; then
+      echo "✗ Virtual environment not found"
+      echo "Run: just docs-install"
+      exit 1
+    fi
+    source venv/bin/activate
+    echo "Starting documentation server with auto-reload..."
+    echo "Open: http://localhost:8000"
+    echo "Press Ctrl+C to stop"
+    cd docs
+    sphinx-autobuild . _build/html --port 8000 --open-browser
+
+# Clean documentation build artifacts
+[group('Documentation')]
+docs-clean:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    cd docs
+    rm -rf _build .jupyter_cache
+    echo "✓ Documentation build artifacts cleaned"
+
+# Full documentation rebuild (clean + build)
+[group('Documentation')]
+docs-rebuild:
+    #!/usr/bin/env bash
+    just docs-clean
+    just docs-build

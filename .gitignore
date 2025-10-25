@@ -48,3 +48,11 @@ dht.dat
 resume/
 settings.json
 
+# Documentation build artifacts
+docs/_build/
+docs/.jupyter_cache/
+venv/
+.venv/
+*.pyc
+__pycache__/
+
